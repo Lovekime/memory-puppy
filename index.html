@@ -2,59 +2,203 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Memory Puppy</title>
+<title>Memory Puppy 🐶</title>
 
 <style>
 
+*{
+ box-sizing:border-box;
+}
+
 body{
  margin:0;
- min-height:100vh;
- background:#fff7f3;
- font-family:-apple-system,BlinkMacSystemFont,"Segoe UI";
+ height:100vh;
  display:flex;
  justify-content:center;
  align-items:center;
+ background:
+ linear-gradient(
+ 135deg,
+ #fff0f5,
+ #fff8e7
+ );
+ font-family:
+ -apple-system,
+ BlinkMacSystemFont,
+ "Segoe UI",
+ sans-serif;
 }
+
+
+/* 主卡片 */
 
 .card{
- background:white;
+
  width:90%;
- max-width:420px;
- padding:35px;
- border-radius:30px;
+ max-width:430px;
+
+ background:
+ rgba(255,255,255,.75);
+
+ backdrop-filter:blur(20px);
+
+ border-radius:36px;
+
+ padding:45px 30px;
+
  text-align:center;
- box-shadow:0 15px 40px rgba(0,0,0,.08);
+
+ box-shadow:
+ 0 20px 50px rgba(200,120,150,.18);
+
+ animation:
+ float 4s ease-in-out infinite;
+
 }
+
+
+@keyframes float{
+
+50%{
+ transform:translateY(-8px);
+}
+
+}
+
+
+
+/* 小狗 */
+
+.dog{
+
+ font-size:80px;
+
+ animation:
+ bounce 2s infinite;
+
+}
+
+
+@keyframes bounce{
+
+50%{
+ transform:translateY(-10px);
+}
+
+}
+
+
 
 h1{
- font-size:34px;
+
+ font-size:38px;
+
+ margin:15px 0;
+
+ color:#5a4050;
+
 }
 
-p{
- color:#777;
+
+.sub{
+
+ color:#9b7b8c;
+
+ font-size:16px;
+
+ line-height:1.8;
+
 }
 
-button{
- border:none;
- border-radius:18px;
- padding:15px 25px;
- background:#ffb6c1;
- color:white;
- font-size:18px;
- margin-top:15px;
- cursor:pointer;
+
+
+/* 上传框 */
+
+.upload{
+
+ margin-top:35px;
+
+ padding:25px;
+
+ border-radius:24px;
+
+ background:#fff;
+
+ border:2px dashed #f3b6c8;
+
 }
+
 
 input{
- margin-top:20px;
+
+ display:none;
+
 }
 
-#status{
- margin-top:20px;
- color:#666;
+
+label{
+
+ display:block;
+
+ padding:14px;
+
+ background:#ffd1df;
+
+ color:#744557;
+
+ border-radius:20px;
+
+ cursor:pointer;
+
+ font-weight:bold;
+
 }
+
+
+
+button{
+
+ margin-top:25px;
+
+ width:100%;
+
+ border:0;
+
+ padding:18px;
+
+ border-radius:25px;
+
+ background:
+ linear-gradient(
+ 135deg,
+ #ff9fba,
+ #ffbfd0
+ );
+
+ color:white;
+
+ font-size:18px;
+
+ font-weight:bold;
+
+ cursor:pointer;
+
+}
+
+
+.tip{
+
+ margin-top:25px;
+
+ color:#c18a9d;
+
+ font-size:14px;
+
+}
+
+
 
 </style>
 
@@ -66,294 +210,91 @@ input{
 
 <div class="card">
 
-<h1>🐶 Memory Puppy</h1>
 
-<p>
-上传你的 ChatGPT ZIP<br>
-小狗帮你整理聊天记忆
-</p>
+<div class="dog">
+🐶
+</div>
+
+
+<h1>
+Memory Puppy
+</h1>
+
+
+<div class="sub">
+
+把你的聊天记录<br>
+
+变成属于你的珍贵记忆
+
+</div>
+
+
+
+<div class="upload">
+
+
+<label for="zip">
+
+📦 选择 ChatGPT ZIP
+
+</label>
 
 
 <input 
+id="zip"
 type="file"
-id="zipFile"
-accept=".zip">
+accept=".zip"
+>
 
 
-<br>
+
+<div id="name">
+
+还没有选择文件
+
+</div>
 
 
-<button onclick="processZip()">
+</div>
+
+
+
+<button>
+
 开始整理 🐾
+
 </button>
 
 
-<div id="status">
-等待上传...
+
+<div class="tip">
+
+汪！小狗会帮你筛选重复记忆 ✨
+
 </div>
 
 
 </div>
 
-
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 
 <script>
 
-
-let memories=[];
-
-
-
-async function processZip(){
+const zip=document.querySelector("#zip");
+const name=document.querySelector("#name");
 
 
-const file=
-document.getElementById("zipFile").files[0];
+zip.onchange=()=>{
 
+ if(zip.files.length){
 
-if(!file){
+ name.innerHTML=
+ "🐾 "+zip.files[0].name;
 
-alert("先选择 ZIP 哦🥺");
-
-return;
+ }
 
 }
-
-
-status.innerHTML="🐶 小狗正在读取 ZIP...";
-
-
-const zip=
-await JSZip.loadAsync(file);
-
-
-
-let jsonFile=null;
-
-
-zip.forEach((path)=>{
-
-
-if(
-path.includes("conversations.json")
-){
-
-jsonFile=path;
-
-}
-
-});
-
-
-
-if(!jsonFile){
-
-status.innerHTML=
-"没有找到 conversations.json";
-
-return;
-
-}
-
-
-
-status.innerHTML=
-"📖 正在解析聊天记录...";
-
-
-
-const text=
-await zip.file(jsonFile).async("string");
-
-
-const data=
-JSON.parse(text);
-
-
-
-let messages=[];
-
-
-
-data.forEach(conv=>{
-
-
-let title=
-conv.title || "无标题";
-
-
-
-if(conv.mapping){
-
-
-Object.values(conv.mapping)
-.forEach(node=>{
-
-
-let msg=node.message;
-
-
-if(
-msg &&
-msg.content &&
-msg.content.parts
-){
-
-
-let content=
-msg.content.parts.join("");
-
-
-
-messages.push({
-
-title:title,
-
-role:
-msg.author?.role || "",
-
-content:content,
-
-time:
-new Date(
-msg.create_time*1000
-).toISOString()
-
-
-});
-
-
-}
-
-
-});
-
-
-}
-
-
-});
-
-
-
-
-// 去重
-
-let map=new Map();
-
-
-messages.forEach(m=>{
-
-
-let key=
-m.role+
-m.content;
-
-
-if(!map.has(key)){
-
-map.set(key,m);
-
-}
-
-
-});
-
-
-
-messages=
-Array.from(map.values());
-
-
-
-messages.sort(
-(a,b)=>
-new Date(a.time)
--
-new Date(b.time)
-);
-
-
-
-memories=messages;
-
-
-
-status.innerHTML=
-`
-🐾 完成啦！
-
-<br><br>
-
-聊天数量：
-${messages.length}
-
-<br><br>
-
-<button onclick="downloadCSV()">
-导出 CSV
-</button>
-
-`;
-
-
-
-}
-
-
-
-
-function downloadCSV(){
-
-
-let csv=
-"标题,角色,内容,时间\n";
-
-
-memories.forEach(m=>{
-
-
-csv+=
-`"${m.title}","${m.role}","${m.content.replace(/"/g,'""')}","${m.time}"\n`;
-
-
-});
-
-
-
-let blob=
-new Blob(
-[csv],
-{
-type:"text/csv;charset=utf-8;"
-}
-);
-
-
-
-let url=
-URL.createObjectURL(blob);
-
-
-
-let a=
-document.createElement("a");
-
-
-a.href=url;
-
-a.download=
-"memory-puppy-chat.csv";
-
-
-a.click();
-
-
-}
-
 
 
 </script>
