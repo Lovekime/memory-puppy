@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memory Puppy</title>
+
+  <style>
+    body{
+      margin:0;
+      background:#fef7f3;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      height:100vh;
+    }
+
+    .card{
+      background:white;
+      padding:40px;
+      border-radius:28px;
+      box-shadow:0 12px 35px rgba(0,0,0,.08);
+      text-align:center;
+      max-width:360px;
+    }
+
+    h1{
+      font-size:34px;
+      margin-bottom:12px;
+    }
+
+    p{
+      color:#666;
+      margin-bottom:24px;
+    }
+
+    button{
+      border:none;
+      border-radius:16px;
+      background:#ffb6c1;
+      color:white;
+      padding:14px 28px;
+      font-size:18px;
+      cursor:pointer;
+    }
+
+    button:hover{
+      background:#ff9fb0;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="card">
+  <h1>🐶 Memory Puppy</h1>
+
+  <p>欢迎回来！</p>
+
+  <button onclick="hello()">
+    摸摸小狗 🥺
+  </button>
+</div>
+
+<script>
+function hello(){
+    alert("汪！我会帮你记住重要的事情！🐶💕");
+}
+</script>
+
+</body>
+</html>
