@@ -1,73 +1,363 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Memory Puppy</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 
-  <style>
-    body{
-      margin:0;
-      background:#fef7f3;
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      height:100vh;
-    }
+<title>Memory Puppy</title>
 
-    .card{
-      background:white;
-      padding:40px;
-      border-radius:28px;
-      box-shadow:0 12px 35px rgba(0,0,0,.08);
-      text-align:center;
-      max-width:360px;
-    }
+<style>
 
-    h1{
-      font-size:34px;
-      margin-bottom:12px;
-    }
+body{
+ margin:0;
+ min-height:100vh;
+ background:#fff7f3;
+ font-family:-apple-system,BlinkMacSystemFont,"Segoe UI";
+ display:flex;
+ justify-content:center;
+ align-items:center;
+}
 
-    p{
-      color:#666;
-      margin-bottom:24px;
-    }
+.card{
+ background:white;
+ width:90%;
+ max-width:420px;
+ padding:35px;
+ border-radius:30px;
+ text-align:center;
+ box-shadow:0 15px 40px rgba(0,0,0,.08);
+}
 
-    button{
-      border:none;
-      border-radius:16px;
-      background:#ffb6c1;
-      color:white;
-      padding:14px 28px;
-      font-size:18px;
-      cursor:pointer;
-    }
+h1{
+ font-size:34px;
+}
 
-    button:hover{
-      background:#ff9fb0;
-    }
-  </style>
+p{
+ color:#777;
+}
+
+button{
+ border:none;
+ border-radius:18px;
+ padding:15px 25px;
+ background:#ffb6c1;
+ color:white;
+ font-size:18px;
+ margin-top:15px;
+ cursor:pointer;
+}
+
+input{
+ margin-top:20px;
+}
+
+#status{
+ margin-top:20px;
+ color:#666;
+}
+
+</style>
+
 </head>
+
 
 <body>
 
+
 <div class="card">
-  <h1>🐶 Memory Puppy</h1>
 
-  <p>欢迎回来！</p>
+<h1>🐶 Memory Puppy</h1>
 
-  <button onclick="hello()">
-    摸摸小狗 🥺
-  </button>
+<p>
+上传你的 ChatGPT ZIP<br>
+小狗帮你整理聊天记忆
+</p>
+
+
+<input 
+type="file"
+id="zipFile"
+accept=".zip">
+
+
+<br>
+
+
+<button onclick="processZip()">
+开始整理 🐾
+</button>
+
+
+<div id="status">
+等待上传...
 </div>
 
+
+</div>
+
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+
 <script>
-function hello(){
-    alert("汪！我会帮你记住重要的事情！🐶💕");
+
+
+let memories=[];
+
+
+
+async function processZip(){
+
+
+const file=
+document.getElementById("zipFile").files[0];
+
+
+if(!file){
+
+alert("先选择 ZIP 哦🥺");
+
+return;
+
 }
+
+
+status.innerHTML="🐶 小狗正在读取 ZIP...";
+
+
+const zip=
+await JSZip.loadAsync(file);
+
+
+
+let jsonFile=null;
+
+
+zip.forEach((path)=>{
+
+
+if(
+path.includes("conversations.json")
+){
+
+jsonFile=path;
+
+}
+
+});
+
+
+
+if(!jsonFile){
+
+status.innerHTML=
+"没有找到 conversations.json";
+
+return;
+
+}
+
+
+
+status.innerHTML=
+"📖 正在解析聊天记录...";
+
+
+
+const text=
+await zip.file(jsonFile).async("string");
+
+
+const data=
+JSON.parse(text);
+
+
+
+let messages=[];
+
+
+
+data.forEach(conv=>{
+
+
+let title=
+conv.title || "无标题";
+
+
+
+if(conv.mapping){
+
+
+Object.values(conv.mapping)
+.forEach(node=>{
+
+
+let msg=node.message;
+
+
+if(
+msg &&
+msg.content &&
+msg.content.parts
+){
+
+
+let content=
+msg.content.parts.join("");
+
+
+
+messages.push({
+
+title:title,
+
+role:
+msg.author?.role || "",
+
+content:content,
+
+time:
+new Date(
+msg.create_time*1000
+).toISOString()
+
+
+});
+
+
+}
+
+
+});
+
+
+}
+
+
+});
+
+
+
+
+// 去重
+
+let map=new Map();
+
+
+messages.forEach(m=>{
+
+
+let key=
+m.role+
+m.content;
+
+
+if(!map.has(key)){
+
+map.set(key,m);
+
+}
+
+
+});
+
+
+
+messages=
+Array.from(map.values());
+
+
+
+messages.sort(
+(a,b)=>
+new Date(a.time)
+-
+new Date(b.time)
+);
+
+
+
+memories=messages;
+
+
+
+status.innerHTML=
+`
+🐾 完成啦！
+
+<br><br>
+
+聊天数量：
+${messages.length}
+
+<br><br>
+
+<button onclick="downloadCSV()">
+导出 CSV
+</button>
+
+`;
+
+
+
+}
+
+
+
+
+function downloadCSV(){
+
+
+let csv=
+"标题,角色,内容,时间\n";
+
+
+memories.forEach(m=>{
+
+
+csv+=
+`"${m.title}","${m.role}","${m.content.replace(/"/g,'""')}","${m.time}"\n`;
+
+
+});
+
+
+
+let blob=
+new Blob(
+[csv],
+{
+type:"text/csv;charset=utf-8;"
+}
+);
+
+
+
+let url=
+URL.createObjectURL(blob);
+
+
+
+let a=
+document.createElement("a");
+
+
+a.href=url;
+
+a.download=
+"memory-puppy-chat.csv";
+
+
+a.click();
+
+
+}
+
+
+
 </script>
+
 
 </body>
 </html>
