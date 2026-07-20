@@ -1,103 +1,129 @@
-// 🐶 Memory Puppy Core
-// ZIP -> JSZip -> conversations.json -> CSV
-
-let chatData = null;
-let csvFiles = {};
-
-const zipInput = document.getElementById("zipInput");
-const startBtn = document.getElementById("startBtn");
-const result = document.getElementById("result");
+let selectedZip = null;
+let exportData = {
+    conversations: [],
+    messages: [],
+    memories: [],
+    logs: []
+};
 
 
 // 选择ZIP
-zipInput.addEventListener("change", () => {
+document.getElementById("zipInput").addEventListener("change", function(e){
 
-    if(zipInput.files.length > 0){
+    selectedZip = e.target.files[0];
 
-        result.innerHTML =
-        "🐾 小狗收到聊天包啦！<br>等待开始整理...";
+    if(selectedZip){
+
+        document.getElementById("result").innerHTML =
+        "🐾 已收到聊天包：<br>" 
+        + selectedZip.name;
 
     }
 
 });
 
 
+// 开始整理
+document.getElementById("startBtn").addEventListener("click", async function(){
 
-// 开始解析
-startBtn.addEventListener("click", async()=>{
+    if(!selectedZip){
 
-
-    if(!zipInput.files.length){
-
-        result.innerHTML =
-        "🥺 请先选择ZIP文件";
-
+        alert("请先选择聊天ZIP哦 🥺");
         return;
+
     }
 
 
-    result.innerHTML =
-    "🐶 小狗正在拆聊天包...";
+    document.getElementById("result").innerHTML =
+    "🐶 小狗正在拆包...";
 
 
     try{
 
 
-        const file = zipInput.files[0];
+        const zip = await JSZip.loadAsync(selectedZip);
 
 
-        const zip = await JSZip.loadAsync(file);
+        let file = zip.file("conversations.json");
 
 
+        if(!file){
 
-        let conversationsFile = null;
+            // 防止路径不同
+            let files = Object.keys(zip.files);
+
+            let target = files.find(
+                x=>x.endsWith("conversations.json")
+            );
 
 
+            if(target){
 
-        // 找 conversations.json
-
-        zip.forEach((path)=>{
-
-
-            if(path.endsWith("conversations.json")){
-
-                conversationsFile = zip.file(path);
+                file = zip.file(target);
 
             }
 
-
-        });
-
+        }
 
 
-        if(!conversationsFile){
+
+        if(!file){
 
             throw new Error(
-            "没有找到 conversations.json"
+                "没有找到 conversations.json"
             );
 
         }
 
 
 
-        const text =
-        await conversationsFile.async("text");
+        const text = await file.async("string");
+
+
+        const conversations = JSON.parse(text);
 
 
 
-        chatData = JSON.parse(text);
+        processConversation(conversations);
 
 
 
-        analyze(chatData);
+        document.getElementById("result").innerHTML =
+
+        `
+        🐶 解析完成！✨
+        <br><br>
+
+        📦 聊天数量：
+        ${exportData.conversations.length}
+
+        <br>
+
+        💬 消息数量：
+        ${exportData.messages.length}
+
+        <br><br>
+
+        🐾 可以导出CSV啦
+
+        <br><br>
+
+        <button onclick="downloadAll()">
+        导出四个CSV
+        </button>
+
+        `;
 
 
 
-    }catch(e){
+    }catch(err){
 
 
-        result.innerHTML =
-        "🥺 出错：" + e.message;
+        document.getElementById("result").innerHTML =
+        "🥺 出错：" + err.message;
+
+
+        console.error(err);
 
 
     }
@@ -109,179 +135,93 @@ startBtn.addEventListener("click", async()=>{
 
 
 
-
-function analyze(data){
-
-
-    let conversations =
-    Array.isArray(data)
-    ? data
-    : [];
+// 解析聊天
+function processConversation(data){
 
 
-
-    let messageCount = 0;
-
-    let start = null;
-    let end = null;
+    exportData.conversations=[];
+    exportData.messages=[];
+    exportData.memories=[];
+    exportData.logs=[];
 
 
 
-    let conversationsCSV =
-    [
-    "id,title,create_time,update_time"
-    ];
+    data.forEach(chat=>{
+
+
+        exportData.conversations.push({
+
+            id:chat.id,
+
+            title:chat.title || "",
+
+            create_time:
+            timestamp(chat.create_time),
+
+            update_time:
+            timestamp(chat.update_time)
+
+        });
 
 
 
-    let messagesCSV =
-    [
-    "conversation_id,role,message,time"
-    ];
+        if(chat.mapping){
+
+
+            Object.values(chat.mapping)
+            .forEach(node=>{
+
+
+                if(node.message){
+
+
+                    let msg=node.message;
+
+
+                    let content="";
+
+
+                    if(msg.content
+                    && msg.content.parts){
+
+
+                        content =
+                        msg.content.parts.join("\n");
+
+
+                    }
 
 
 
-    let memoriesCSV =
-    [
-    "type,content"
-    ];
+                    exportData.messages.push({
+
+                        conversation_id:
+                        chat.id,
+
+                        role:
+                        msg.author?.role || "",
+
+                        text:
+                        content,
+
+                        time:
+                        timestamp(msg.create_time)
 
 
+                    });
 
-    let logsCSV =
-    [
-    "time,status,message"
-    ];
-
-
-
-    conversations.forEach(chat=>{
-
-
-        conversationsCSV.push(
-        [
-        chat.id,
-        clean(chat.title),
-        chat.create_time,
-        chat.update_time
-        ].join(",")
-        );
-
-
-
-        let mapping =
-        chat.mapping || {};
-
-
-
-        Object.values(mapping)
-        .forEach(node=>{
-
-
-            let msg =
-            node.message;
-
-
-            if(msg && msg.content){
-
-
-                messageCount++;
-
-
-                let role =
-                msg.author?.role || "unknown";
-
-
-                let content =
-                msg.content.parts
-                ?.join(" ")
-                || "";
-
-
-
-                let time =
-                msg.create_time || "";
-
-
-
-                messagesCSV.push(
-                [
-                chat.id,
-                role,
-                clean(content),
-                time
-                ].join(",")
-                );
-
-
-
-                if(time){
-
-                    if(!start || time < start)
-                    start=time;
-
-
-                    if(!end || time > end)
-                    end=time;
 
                 }
 
 
-            }
+            });
 
 
-        });
+        }
+
 
 
     });
-
-
-
-
-    csvFiles={
-
-        "conversations.csv":
-        conversationsCSV.join("\n"),
-
-
-        "messages.csv":
-        messagesCSV.join("\n"),
-
-
-        "memories.csv":
-        memoriesCSV.join("\n"),
-
-
-        "processing_logs.csv":
-        logsCSV.join("\n")
-
-    };
-
-
-
-    result.innerHTML =
-    `
-    🐶 解析完成！<br><br>
-
-    📦 聊天数量：
-    ${conversations.length}<br>
-
-    💬 消息数量：
-    ${messageCount}<br>
-
-    📅 时间范围：<br>
-    ${formatTime(start)}
-    ～ 
-    ${formatTime(end)}
-    <br><br>
-
-    🐾 小狗已经整理好四个表啦！
-    <br>
-    <button onclick="downloadAll()">
-    导出四个CSV
-    </button>
-
-    `;
 
 
 
@@ -291,71 +231,125 @@ function analyze(data){
 
 
 
+
+
+function timestamp(t){
+
+    if(!t) return "";
+
+    return new Date(
+        t*1000
+    ).toISOString();
+
+
+}
+
+
+
+
+
+
+// 下载CSV
 function downloadAll(){
 
 
-    Object.keys(csvFiles)
-    .forEach(name=>{
+    createCSV(
+        "conversations.csv",
+        exportData.conversations
+    );
 
 
-        let blob =
-        new Blob(
-        [csvFiles[name]],
-        {
-        type:"text/csv;charset=utf-8"
-        });
+    createCSV(
+        "messages.csv",
+        exportData.messages
+    );
 
 
-        let url =
-        URL.createObjectURL(blob);
+    createCSV(
+        "memories.csv",
+        exportData.memories
+    );
 
 
-        let a =
-        document.createElement("a");
+    createCSV(
+        "processing_logs.csv",
+        exportData.logs
+    );
 
 
-        a.href=url;
+}
 
-        a.download=name;
 
-        a.click();
+
+
+
+
+
+function createCSV(filename,data){
+
+
+    if(data.length===0){
+
+        data=[{}];
+
+    }
+
+
+    let headers =
+    Object.keys(data[0]);
+
+
+    let csv =
+    headers.join(",")
+    + "\n";
+
+
+    data.forEach(row=>{
+
+
+        csv += headers.map(h=>{
+
+
+            let value =
+            row[h] ?? "";
+
+
+            return '"' +
+            String(value)
+            .replace(/"/g,'""')
+            + '"';
+
+
+        }).join(",")
+        + "\n";
 
 
     });
 
 
-}
+
+    let blob =
+    new Blob(
+        [csv],
+        {
+            type:"text/csv;charset=utf-8;"
+        }
+    );
 
 
+    let a =
+    document.createElement("a");
 
 
-
-function clean(str){
-
-
-    if(!str)
-    return "";
+    a.href =
+    URL.createObjectURL(blob);
 
 
-    return String(str)
-    .replace(/,/g,"，")
-    .replace(/\n/g," ");
-
-}
+    a.download =
+    filename;
 
 
-
-function formatTime(t){
-
-
-    if(!t)
-    return "-";
-
-
-    return new Date(
-    t*1000
-    )
-    .toLocaleDateString();
+    a.click();
 
 
 }
