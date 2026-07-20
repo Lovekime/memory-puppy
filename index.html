@@ -1,206 +1,14 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 
 <title>Memory Puppy 🐶</title>
 
-<style>
-
-*{
- box-sizing:border-box;
-}
-
-body{
- margin:0;
- height:100vh;
- display:flex;
- justify-content:center;
- align-items:center;
- background:
- linear-gradient(
- 135deg,
- #fff0f5,
- #fff8e7
- );
- font-family:
- -apple-system,
- BlinkMacSystemFont,
- "Segoe UI",
- sans-serif;
-}
-
-
-/* 主卡片 */
-
-.card{
-
- width:90%;
- max-width:430px;
-
- background:
- rgba(255,255,255,.75);
-
- backdrop-filter:blur(20px);
-
- border-radius:36px;
-
- padding:45px 30px;
-
- text-align:center;
-
- box-shadow:
- 0 20px 50px rgba(200,120,150,.18);
-
- animation:
- float 4s ease-in-out infinite;
-
-}
-
-
-@keyframes float{
-
-50%{
- transform:translateY(-8px);
-}
-
-}
-
-
-
-/* 小狗 */
-
-.dog{
-
- font-size:80px;
-
- animation:
- bounce 2s infinite;
-
-}
-
-
-@keyframes bounce{
-
-50%{
- transform:translateY(-10px);
-}
-
-}
-
-
-
-h1{
-
- font-size:38px;
-
- margin:15px 0;
-
- color:#5a4050;
-
-}
-
-
-.sub{
-
- color:#9b7b8c;
-
- font-size:16px;
-
- line-height:1.8;
-
-}
-
-
-
-/* 上传框 */
-
-.upload{
-
- margin-top:35px;
-
- padding:25px;
-
- border-radius:24px;
-
- background:#fff;
-
- border:2px dashed #f3b6c8;
-
-}
-
-
-input{
-
- display:none;
-
-}
-
-
-label{
-
- display:block;
-
- padding:14px;
-
- background:#ffd1df;
-
- color:#744557;
-
- border-radius:20px;
-
- cursor:pointer;
-
- font-weight:bold;
-
-}
-
-
-
-button{
-
- margin-top:25px;
-
- width:100%;
-
- border:0;
-
- padding:18px;
-
- border-radius:25px;
-
- background:
- linear-gradient(
- 135deg,
- #ff9fba,
- #ffbfd0
- );
-
- color:white;
-
- font-size:18px;
-
- font-weight:bold;
-
- cursor:pointer;
-
-}
-
-
-.tip{
-
- margin-top:25px;
-
- color:#c18a9d;
-
- font-size:14px;
-
-}
-
-
-
-</style>
+<link rel="stylesheet" href="style.css">
 
 </head>
 
@@ -208,11 +16,13 @@ button{
 <body>
 
 
-<div class="card">
+<div class="app">
 
 
-<div class="dog">
+<div class="puppy">
+
 🐶
+
 </div>
 
 
@@ -221,84 +31,74 @@ Memory Puppy
 </h1>
 
 
-<div class="sub">
-
-把你的聊天记录<br>
-
-变成属于你的珍贵记忆
-
-</div>
+<p class="subtitle">
+把聊天记录变成属于你的记忆 ✨
+</p>
 
 
 
-<div class="upload">
+<div class="card">
 
 
-<label for="zip">
+<h2>
+📦 上传聊天包
+</h2>
 
-📦 选择 ChatGPT ZIP
 
-</label>
+<p>
+选择 ChatGPT 导出的 ZIP 文件
+</p>
 
+
+<label class="upload">
+
+选择 ZIP 🐾
 
 <input 
-id="zip"
+id="zipFile"
 type="file"
 accept=".zip"
 >
 
+</label>
 
 
-<div id="name">
+
+<div id="fileName">
 
 还没有选择文件
 
 </div>
 
 
-</div>
 
+<button id="start">
 
-
-<button>
-
-开始整理 🐾
+开始整理
 
 </button>
 
 
 
-<div class="tip">
-
-汪！小狗会帮你筛选重复记忆 ✨
-
-</div>
-
-
 </div>
 
 
 
-<script>
+<div class="status"
+id="status">
 
-const zip=document.querySelector("#zip");
-const name=document.querySelector("#name");
+🐶 小狗正在等待主人...
 
-
-zip.onchange=()=>{
-
- if(zip.files.length){
-
- name.innerHTML=
- "🐾 "+zip.files[0].name;
-
- }
-
-}
+</div>
 
 
-</script>
 
+</div>
+
+
+
+<script src="script.js"></script>
 
 </body>
+
 </html>
