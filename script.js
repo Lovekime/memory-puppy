@@ -1,7 +1,7 @@
-// ================================
-// Memory Puppy v0.2
-// ZIP -> 4 CSV
-// ================================
+// =======================================
+// Memory Puppy v0.3
+// ChatGPT ZIP -> Supabase CSV
+// =======================================
 
 
 let zipFile = null;
@@ -26,6 +26,7 @@ document
 
 
 
+
 // 开始整理
 
 document
@@ -35,22 +36,27 @@ document
 
     if(!zipFile){
 
-        alert("请先选择ZIP文件🐶");
+        alert("🐶 请先选择ZIP文件");
 
         return;
 
     }
 
 
-    document.getElementById("result").innerHTML =
-    "🐶 小狗正在拆聊天包...";
+
+    const result =
+    document.getElementById("result");
+
+
+    result.innerHTML =
+    "🐶 小狗正在读取聊天记录...";
 
 
 
     try{
 
 
-        // 解压
+        // 解压ZIP
 
         const zip =
         await JSZip.loadAsync(zipFile);
@@ -65,37 +71,42 @@ document
         if(!file){
 
             throw new Error(
-            "没有找到 conversations.json"
+                "ZIP里面没有找到 conversations.json"
             );
 
         }
 
 
 
-        const text =
+        const json =
         await file.async("string");
 
 
 
-        const conversations =
-        JSON.parse(text);
+        const chats =
+        JSON.parse(json);
 
 
+
+
+        // CSV表头
 
         let conversationsCSV =
-        "id,title,source_file,created_time,updated_time\n";
+        "id,title,source_file,file_hash,created_time,updated_time,created_at\n";
 
 
         let messagesCSV =
-        "id,conversation_id,role,content,message_time,message_hash\n";
+        "id,conversation_id,role,content,message_time,message_hash,created_at\n";
 
 
         let memoriesCSV =
-        "id,content,category,importance,memory_time\n";
+        "id,content,category,importance,source_message_id,memory_time,created_at\n";
 
 
         let logsCSV =
-        "file_name,status,processed_at,message_count,memory_count\n";
+        "id,file_name,file_hash,status,processed_at,message_count,memory_count\n";
+
+
 
 
 
@@ -103,18 +114,16 @@ document
 
 
 
-        // 遍历聊天
+        const fileHash =
+        simpleHash(zipFile.name);
+
+
+
+
 
         for(
-            let i=0;
-            i<conversations.length;
-            i++
+            const chat of chats
         ){
-
-
-            const chat =
-            conversations[i];
-
 
 
             const conversationId =
@@ -122,61 +131,108 @@ document
 
 
 
-            conversationsCSV +=
-            `"${conversationId}",`+
-            `"${escapeCSV(chat.title || "未命名")}",`+
-            `"${zipFile.name}",`+
-            `"${date(chat.create_time)}",`+
-            `"${date(chat.update_time)}"\n`;
+            const now =
+            new Date()
+            .toISOString();
 
 
 
-            const mapping =
-            chat.mapping;
+
+            conversationsCSV += csvRow([
+
+                conversationId,
+
+                chat.title || "未命名聊天",
+
+                zipFile.name,
+
+                fileHash,
+
+                formatTime(chat.create_time),
+
+                formatTime(chat.update_time),
+
+                now
+
+            ]);
 
 
 
-            for(const key in mapping){
 
 
-                const msg =
-                mapping[key].message;
+
+
+            if(!chat.mapping)
+                continue;
+
+
+
+
+
+            for(
+                const key in chat.mapping
+            ){
+
+
+
+                const message =
+                chat.mapping[key].message;
 
 
 
                 if(
-                    msg &&
-                    msg.content &&
-                    msg.content.parts
+                    !message ||
+                    !message.content ||
+                    !message.content.parts
                 ){
 
-
-                    const messageId =
-                    crypto.randomUUID();
-
-
-
-                    const content =
-                    msg.content.parts.join("\n");
-
-
-
-                    messagesCSV +=
-
-                    `"${messageId}",`+
-                    `"${conversationId}",`+
-                    `"${msg.author?.role || "unknown"}",`+
-                    `"${escapeCSV(content)}",`+
-                    `"${date(msg.create_time)}",`+
-                    `"${hash(content)}"\n`;
-
-
-
-                    messageCount++;
-
+                    continue;
 
                 }
 
+
+
+
+
+                const content =
+                message.content.parts
+                .join("\n");
+
+
+
+                if(!content.trim())
+                    continue;
+
+
+
+
+
+                const messageId =
+                crypto.randomUUID();
+
+
+
+                messagesCSV += csvRow([
+
+                    messageId,
+
+                    conversationId,
+
+                    message.author?.role || "unknown",
+
+                    content,
+
+                    formatTime(message.create_time),
+
+                    simpleHash(content),
+
+                    now
+
+                ]);
+
+
+
+                messageCount++;
 
             }
 
@@ -186,19 +242,36 @@ document
 
 
 
-        logsCSV +=
-
-        `"${zipFile.name}",`+
-        `"success",`+
-        `"${new Date().toISOString()}",`+
-        `"${messageCount}",0`;
 
 
+        // 日志
+
+        logsCSV += csvRow([
+
+            crypto.randomUUID(),
+
+            zipFile.name,
+
+            fileHash,
+
+            "success",
+
+            new Date()
+            .toISOString(),
+
+            messageCount,
+
+            0
+
+        ]);
 
 
 
-        // 下载四个文件
 
+
+
+
+        // 下载
 
         downloadCSV(
             "conversations.csv",
@@ -226,32 +299,54 @@ document
 
 
 
-        document.getElementById("result").innerHTML =
+
+        result.innerHTML =
 
         `
-        🐶整理完成！<br><br>
+        🐶 整理完成！
 
-        📦聊天数量：
-        ${conversations.length}<br>
+        <br><br>
 
-        💬消息数量：
-        ${messageCount}<br><br>
+        📦 聊天数量：
+        ${chats.length}
 
-        已生成4个CSV文件✨
+        <br>
+
+        💬 消息数量：
+        ${messageCount}
+
+        <br><br>
+
+        已生成：
+
+        <br>
+        🐾 conversations.csv
+
+        <br>
+        🐾 messages.csv
+
+        <br>
+        🐾 memories.csv
+
+        <br>
+        🐾 processing_logs.csv
+
         `;
 
 
 
     }
-    catch(e){
+    catch(error){
 
-        console.error(e);
 
-        document.getElementById("result").innerHTML =
-        "🥺错误："+e.message;
+        console.error(error);
+
+
+        result.innerHTML =
+        "🥺 出错：" + error.message;
+
 
     }
-
 
 
 });
@@ -260,90 +355,76 @@ document
 
 
 
-// CSV转义
 
-function escapeCSV(str){
 
-    return String(str)
-    .replace(/"/g,'""');
+// ===========================
+// 工具函数
+// ===========================
+
+
+
+function csvRow(array){
+
+
+    return array
+    .map(value=>{
+
+        return '"' +
+        String(value ?? "")
+        .replaceAll('"','""')
+        +
+        '"';
+
+    })
+    .join(",")
+    +
+    "\n";
 
 }
 
 
 
-// 时间转换
 
-function date(time){
+
+function formatTime(time){
+
 
     if(!time)
-    return "";
-
-    return new Date(
-        time*1000
-    )
-    .toISOString();
-
-}
+        return "";
 
 
+    try{
 
-// 简单hash
+        return new Date(
+            time * 1000
+        )
+        .toISOString();
 
-function hash(str){
 
-    let h=0;
+    }
+    catch{
 
-    for(
-        let i=0;
-        i<str.length;
-        i++
-    ){
-
-        h =
-        ((h<<5)-h)+str.charCodeAt(i);
+        return "";
 
     }
 
-    return h.toString();
-
 }
 
 
 
-// 下载CSV
-
-function downloadCSV(
-    filename,
-    content
-){
-
-    const blob =
-    new Blob(
-        [content],
-        {
-            type:
-            "text/csv;charset=utf-8;"
-        }
-    );
-
-
-    const url =
-    URL.createObjectURL(blob);
 
 
 
-    const a =
-    document.createElement("a");
+function simpleHash(str){
 
 
-    a.href=url;
+    let hash = 0;
 
-    a.download=filename;
 
-    a.click();
+    str = String(str);
 
 
 
-    URL.revokeObjectURL(url);
-
-}
+    for(
+        let i = 0;
+  
