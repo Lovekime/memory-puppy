@@ -1,185 +1,408 @@
-*{
-box-sizing:border-box;
-}
+/* =================================
+   Memory Puppy v2
+   Cute Anime UI
+================================= */
 
 
-body{
+* {
 
-margin:0;
+    box-sizing: border-box;
 
-height:100vh;
-
-display:flex;
-
-justify-content:center;
-
-align-items:center;
-
-background:
-linear-gradient(
-135deg,
-#fff0f5,
-#fff8e8
-);
-
-font-family:
-"Microsoft YaHei",
-sans-serif;
+    font-family:
+    "Microsoft YaHei",
+    sans-serif;
 
 }
 
 
 
-.app{
+body {
 
-width:90%;
+    margin: 0;
 
-max-width:420px;
+    min-height: 100vh;
 
-text-align:center;
+    background:
+    linear-gradient(
+        135deg,
+        #fff5f7,
+        #f7f0ff
+    );
 
-}
-
-
-
-.puppy{
-
-font-size:90px;
-
-animation:
-float 3s infinite;
+    color: #5a4650;
 
 }
 
 
 
-@keyframes float{
-
-50%{
-
-transform:
-translateY(-12px);
-
-}
-
-}
+.container {
 
 
+    width: 100%;
 
-h1{
+    max-width: 520px;
 
-font-size:42px;
+    margin: auto;
 
-color:#5c4050;
+    padding: 30px 20px;
 
-margin:10px;
 
 }
 
 
 
-.subtitle{
 
-color:#a17c91;
+/* 小狗区域 */
 
-font-size:16px;
+.puppy {
 
-}
+    text-align: center;
 
-
-
-.card{
-
-margin-top:30px;
-
-background:
-rgba(255,255,255,.8);
-
-padding:30px;
-
-border-radius:35px;
-
-box-shadow:
-0 20px 50px
-rgba(200,130,160,.2);
+    animation:
+    float 3s infinite ease-in-out;
 
 }
 
 
 
-.upload{
+.face {
 
-display:block;
 
-padding:18px;
-
-margin-top:20px;
-
-background:#ffd0df;
-
-border-radius:25px;
-
-color:#704457;
-
-font-weight:bold;
-
-cursor:pointer;
+    font-size: 80px;
 
 }
 
 
 
-.upload input{
-
-display:none;
-
-}
+h1 {
 
 
+    margin: 10px 0;
 
-#fileName{
+    color: #d982a8;
 
-margin-top:15px;
-
-color:#999;
+    font-size: 34px;
 
 }
 
 
 
-button{
+p {
 
-width:100%;
-
-margin-top:25px;
-
-padding:18px;
-
-border:none;
-
-border-radius:25px;
-
-background:
-linear-gradient(
-135deg,
-#ff9fba,
-#ffbfd2
-);
-
-color:white;
-
-font-size:18px;
-
-font-weight:bold;
+    color:#8f7785;
 
 }
 
 
 
-.status{
 
-margin-top:25px;
 
-color:#b18496;
+/* 卡片 */
+
+.card,
+.memory-card {
+
+
+    background:
+
+    rgba(255,255,255,0.8);
+
+
+    backdrop-filter:
+    blur(10px);
+
+
+    border-radius: 28px;
+
+
+    padding: 25px;
+
+
+    margin-top: 20px;
+
+
+    box-shadow:
+
+    0 10px 30px
+    rgba(180,130,160,.15);
+
+
+}
+
+
+
+
+
+h2 {
+
+
+    margin-top:0;
+
+    color:#b66d91;
+
+}
+
+
+
+
+
+/* 上传按钮 */
+
+
+.upload {
+
+
+    display:block;
+
+
+    background:
+
+    linear-gradient(
+        135deg,
+        #ffb7d5,
+        #dcb7ff
+    );
+
+
+    color:white;
+
+
+    padding:18px;
+
+
+    border-radius:20px;
+
+
+    text-align:center;
+
+
+    cursor:pointer;
+
+
+    transition:.3s;
+
+
+}
+
+
+
+.upload:hover {
+
+
+    transform:
+
+    translateY(-3px);
+
+
+}
+
+
+
+.upload input {
+
+
+    display:none;
+
+
+}
+
+
+
+
+
+#fileName {
+
+
+    margin:15px 0;
+
+
+    padding:12px;
+
+
+    background:#fff8fb;
+
+
+    border-radius:15px;
+
+
+    text-align:center;
+
+
+    color:#997b8c;
+
+
+}
+
+
+
+
+
+
+/* 开始按钮 */
+
+
+button {
+
+
+    width:100%;
+
+
+    border:none;
+
+
+    padding:16px;
+
+
+    border-radius:20px;
+
+
+    font-size:18px;
+
+
+    color:white;
+
+
+    cursor:pointer;
+
+
+    background:
+
+
+    linear-gradient(
+        135deg,
+        #ff8fbc,
+        #b99cff
+    );
+
+
+    box-shadow:
+
+    0 8px 20px
+    rgba(220,140,180,.3);
+
+
+    transition:.3s;
+
+
+}
+
+
+
+
+button:hover {
+
+
+    transform:
+
+    scale(1.03);
+
+
+}
+
+
+
+
+
+/* 状态 */
+
+
+#result {
+
+
+    background:#fff8fc;
+
+
+    padding:15px;
+
+
+    border-radius:18px;
+
+
+    line-height:1.8;
+
+
+}
+
+
+
+
+
+
+/* 记忆卡 */
+
+
+.memory-card {
+
+
+    background:
+
+    linear-gradient(
+        135deg,
+        #fff,
+        #fff5fb
+    );
+
+
+}
+
+
+
+.memory-item {
+
+
+    margin-top:12px;
+
+
+    padding:15px;
+
+
+    background:white;
+
+
+    border-radius:18px;
+
+
+    box-shadow:
+
+    0 5px 15px
+    rgba(200,150,180,.12);
+
+
+}
+
+
+
+
+
+
+/* 小狗漂浮动画 */
+
+
+@keyframes float {
+
+
+    0% {
+
+        transform:
+        translateY(0);
+
+    }
+
+
+    50% {
+
+        transform:
+        translateY(-10px);
+
+    }
+
+
+    100% {
+
+        transform:
+        translateY(0);
+
+    }
+
 
 }
