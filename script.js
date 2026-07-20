@@ -1,131 +1,204 @@
 // 🐶 Memory Puppy
-// ZIP 聊天记录解析核心
+// ZIP 聊天解析核心 v2
+
 
 const zipInput = document.getElementById("zipInput");
 const startBtn = document.getElementById("startBtn");
 const resultBox = document.getElementById("result");
+const fileNameBox = document.getElementById("fileName");
+
 
 let conversations = [];
 let messages = [];
 
 
-startBtn.onclick = async () => {
 
-    if (!zipInput.files[0]) {
-        alert("🐶 请先选择 ChatGPT ZIP 文件");
+// 选择文件后显示名字
+
+zipInput.addEventListener("change",()=>{
+
+    if(zipInput.files.length){
+
+        fileNameBox.innerHTML =
+        "🐾 " + zipInput.files[0].name;
+
+    }
+
+});
+
+
+
+
+// 开始解析
+
+startBtn.onclick = async ()=>{
+
+
+    if(!zipInput.files[0]){
+
+        alert("🐶 请先选择 ZIP 文件");
+
         return;
+
     }
 
 
-    resultBox.innerHTML = "🐾 小狗正在拆 ZIP...";
+
+    resultBox.innerHTML =
+    "🐾 小狗正在拆聊天包...";
 
 
-    try {
 
-        const zipFile = zipInput.files[0];
-
-        const zip = await JSZip.loadAsync(zipFile);
+    try{
 
 
-        resultBox.innerHTML = 
+        const zip = await JSZip.loadAsync(
+            zipInput.files[0]
+        );
+
+
+
+        resultBox.innerHTML =
         "🐾 正在寻找 conversations.json...";
+
 
 
         let jsonFile = null;
 
 
-        for (const fileName of Object.keys(zip.files)) {
 
-            if (fileName.endsWith("conversations.json")) {
-                jsonFile = zip.files[fileName];
+        for(
+            const name of Object.keys(zip.files)
+        ){
+
+            if(
+                name.endsWith("conversations.json")
+            ){
+
+                jsonFile =
+                zip.files[name];
+
                 break;
+
             }
 
         }
 
 
-        if (!jsonFile) {
+
+
+        if(!jsonFile){
+
 
             resultBox.innerHTML =
             "🥺 没找到 conversations.json";
 
+
             return;
+
         }
 
 
-        const text = await jsonFile.async("text");
 
 
-        conversations = JSON.parse(text);
+        const text =
+        await jsonFile.async("text");
+
+
+
+        conversations =
+        JSON.parse(text);
 
 
 
         messages = [];
 
 
-        // 解析聊天
-
-        conversations.forEach(chat => {
 
 
-            const mapping = chat.mapping;
+        // 读取聊天
+
+        conversations.forEach(chat=>{
 
 
-            if (!mapping) return;
+            if(!chat.mapping)
+                return;
 
 
 
-            Object.values(mapping).forEach(node => {
+            Object.values(chat.mapping)
+            .forEach(node=>{
 
 
-                const msg = node.message;
+                const msg =
+                node.message;
 
 
-                if (!msg) return;
+
+                if(!msg)
+                    return;
 
 
-                const role = msg.author?.role || "";
+
+                const role =
+                msg.author?.role || "unknown";
 
 
-                let content = "";
+
+                let content="";
 
 
-                try {
+
+                if(
+                    msg.content &&
+                    msg.content.parts
+                ){
 
                     content =
                     msg.content.parts.join("\n");
 
                 }
 
-                catch {
-
-                    content = "";
-
-                }
 
 
+                if(
+                    content.trim()
+                ){
 
-                if(content.trim()) {
+
+
+                    // 优先使用消息时间
+
+                    let time =
+                    msg.create_time ||
+                    chat.create_time;
+
 
 
                     messages.push({
 
-                        time:
-                        new Date(
-                        chat.create_time * 1000
-                        ),
-
                         title:
-                        chat.title || "未命名聊天",
+                        chat.title ||
+                        "未命名聊天",
+
 
                         role,
 
-                        content
+
+                        content,
+
+
+                        time:
+                        new Date(
+                            time * 1000
+                        )
 
                     });
 
 
+
                 }
+
 
 
             });
@@ -136,19 +209,24 @@ startBtn.onclick = async () => {
 
 
 
+
         showResult();
 
 
 
     }
-
     catch(error){
 
+
         console.error(error);
+
+
 
         resultBox.innerHTML =
         "🐶 出错啦："
         + error.message;
+
+
 
     }
 
@@ -159,13 +237,18 @@ startBtn.onclick = async () => {
 
 
 
+
+
 function showResult(){
+
 
 
     if(messages.length===0){
 
-        resultBox.innerHTML=
-        "🥺 没解析到消息";
+
+        resultBox.innerHTML =
+        "🥺 没找到聊天消息";
+
 
         return;
 
@@ -173,61 +256,79 @@ function showResult(){
 
 
 
+
     const times =
     messages.map(
-        m=>m.time
+        m=>m.time.getTime()
     );
+
 
 
     const minTime =
     new Date(
-        Math.min(
-        ...times.map(t=>t.getTime())
-        )
+        Math.min(...times)
     );
+
 
 
     const maxTime =
     new Date(
-        Math.max(
-        ...times.map(t=>t.getTime())
-        )
+        Math.max(...times)
     );
+
 
 
 
     resultBox.innerHTML = `
 
-    🐶 解析完成！
 
-    <br><br>
+🐶 解析完成！
 
-    📦 聊天数量：
-    ${conversations.length}
 
-    <br>
+<br><br>
 
-    💬 消息数量：
-    ${messages.length}
 
-    <br>
+📦 聊天数量：
 
-    📅 时间范围：
+${conversations.length}
 
-    <br>
 
-    ${minTime.toLocaleDateString()}
-    ~
+<br>
 
-    ${maxTime.toLocaleDateString()}
 
-    <br><br>
+💬 消息数量：
 
-    <button onclick="exportCSV()">
-    🐾 导出 CSV
-    </button>
+${messages.length}
 
-    `;
+
+<br>
+
+
+📅 最早消息：
+
+${formatDate(minTime)}
+
+
+<br>
+
+
+📅 最新消息：
+
+${formatDate(maxTime)}
+
+
+<br><br>
+
+
+<button onclick="exportCSV()">
+
+🐾 导出 CSV
+
+</button>
+
+
+`;
+
 
 
 }
@@ -236,21 +337,44 @@ function showResult(){
 
 
 
+
+
+function formatDate(date){
+
+
+    return date
+    .toLocaleDateString(
+        "zh-CN"
+    );
+
+
+}
+
+
+
+
+
+
+
 function exportCSV(){
+
 
 
     let csv =
     "时间,聊天标题,角色,内容\n";
 
 
+
+
     messages.forEach(m=>{
 
 
         csv +=
-        `"${m.time.toISOString()}","${m.title.replaceAll('"','""')}","${m.role}","${m.content.replaceAll('"','""')}"\n`;
+        `"${m.time.toISOString()}","${safe(m.title)}","${safe(m.role)}","${safe(m.content)}"\n`;
 
 
     });
+
 
 
 
@@ -258,9 +382,11 @@ function exportCSV(){
     new Blob(
         [csv],
         {
-            type:"text/csv;charset=utf-8;"
+            type:
+            "text/csv;charset=utf-8;"
         }
     );
+
 
 
 
@@ -273,10 +399,13 @@ function exportCSV(){
     document.createElement("a");
 
 
+
     a.href=url;
 
-    a.download=
+
+    a.download =
     "memory-puppy-chat.csv";
+
 
 
     a.click();
@@ -284,6 +413,22 @@ function exportCSV(){
 
 
     URL.revokeObjectURL(url);
+
+
+
+}
+
+
+
+
+
+
+function safe(text){
+
+
+    return String(text)
+    .replaceAll('"','""')
+    .replace(/\n/g," ");
 
 
 }
