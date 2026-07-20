@@ -1,33 +1,13 @@
-// ===============================
-// Memory Puppy
-// Supabase + ZIP Parser
-// ===============================
-
-
-// 你的 Supabase 地址
-const SUPABASE_URL = 
-"https://wgkajqfixhrqvpxcncgp.supabase.co";
-
-
-// 把这里换成你的 publishable key
-const SUPABASE_KEY =
-"sb_publishable_2DvJBREf4uQgijcK1SsVCw_wO64lct9";
-
-
-// 创建 Supabase 客户端
-const supabaseClient = supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-);
-
+// ================================
+// Memory Puppy v0.2
+// ZIP -> 4 CSV
+// ================================
 
 
 let zipFile = null;
 
 
-// ===============================
 // 选择ZIP
-// ===============================
 
 document
 .getElementById("zipInput")
@@ -46,9 +26,7 @@ document
 
 
 
-// ===============================
 // 开始整理
-// ===============================
 
 document
 .getElementById("startBtn")
@@ -64,23 +42,20 @@ document
     }
 
 
-
     document.getElementById("result").innerHTML =
-    "🐾 小狗正在解析聊天包...";
+    "🐶 小狗正在拆聊天包...";
 
 
 
     try{
 
 
-        // 解压ZIP
+        // 解压
 
         const zip =
         await JSZip.loadAsync(zipFile);
 
 
-
-        // 找 conversations.json
 
         const file =
         zip.file("conversations.json");
@@ -97,68 +72,75 @@ document
 
 
 
-        const json =
+        const text =
         await file.async("string");
 
 
 
         const conversations =
-        JSON.parse(json);
+        JSON.parse(text);
+
+
+
+        let conversationsCSV =
+        "id,title,source_file,created_time,updated_time\n";
+
+
+        let messagesCSV =
+        "id,conversation_id,role,content,message_time,message_hash\n";
+
+
+        let memoriesCSV =
+        "id,content,category,importance,memory_time\n";
+
+
+        let logsCSV =
+        "file_name,status,processed_at,message_count,memory_count\n";
 
 
 
         let messageCount = 0;
 
 
-        let conversationCount =
-        conversations.length;
+
+        // 遍历聊天
+
+        for(
+            let i=0;
+            i<conversations.length;
+            i++
+        ){
+
+
+            const chat =
+            conversations[i];
 
 
 
-        // ===============================
-        // 写入 conversations
-        // ===============================
-
-
-        for(const chat of conversations){
-
-
-            const {data:conversation,error}
-            =
-            await supabaseClient
-            .from("conversations")
-            .insert({
-
-                title:
-                chat.title || "未命名聊天",
-
-                source_file:
-                zipFile.name,
-
-                created_time:
-                new Date().toISOString()
-
-            })
-            .select()
-            .single();
+            const conversationId =
+            crypto.randomUUID();
 
 
 
-            if(error)
-            throw error;
+            conversationsCSV +=
+            `"${conversationId}",`+
+            `"${escapeCSV(chat.title || "未命名")}",`+
+            `"${zipFile.name}",`+
+            `"${date(chat.create_time)}",`+
+            `"${date(chat.update_time)}"\n`;
 
 
 
-            const messages =
+            const mapping =
             chat.mapping;
 
 
 
-            for(const key in messages){
+            for(const key in mapping){
 
 
                 const msg =
-                messages[key].message;
+                mapping[key].message;
 
 
 
@@ -169,41 +151,24 @@ document
                 ){
 
 
+                    const messageId =
+                    crypto.randomUUID();
+
+
+
                     const content =
                     msg.content.parts.join("\n");
 
 
 
-                    const {error:msgError}
-                    =
-                    await supabaseClient
-                    .from("messages")
-                    .insert({
+                    messagesCSV +=
 
-                        conversation_id:
-                        conversation.id,
-
-                        role:
-                        msg.author?.role || "unknown",
-
-                        content:
-                        content,
-
-                        message_time:
-                        msg.create_time
-                        ?
-                        new Date(
-                        msg.create_time*1000
-                        )
-                        :
-                        null
-
-                    });
-
-
-
-                    if(msgError)
-                    throw msgError;
+                    `"${messageId}",`+
+                    `"${conversationId}",`+
+                    `"${msg.author?.role || "unknown"}",`+
+                    `"${escapeCSV(content)}",`+
+                    `"${date(msg.create_time)}",`+
+                    `"${hash(content)}"\n`;
 
 
 
@@ -216,31 +181,47 @@ document
             }
 
 
+
         }
 
 
 
+        logsCSV +=
 
-        // 写日志
+        `"${zipFile.name}",`+
+        `"success",`+
+        `"${new Date().toISOString()}",`+
+        `"${messageCount}",0`;
 
-        await supabaseClient
-        .from("processing_logs")
-        .insert({
 
-            file_name:
-            zipFile.name,
 
-            status:
-            "success",
 
-            message_count:
-            messageCount,
 
-            memory_count:
-            0
+        // 下载四个文件
 
-        });
 
+        downloadCSV(
+            "conversations.csv",
+            conversationsCSV
+        );
+
+
+        downloadCSV(
+            "messages.csv",
+            messagesCSV
+        );
+
+
+        downloadCSV(
+            "memories.csv",
+            memoriesCSV
+        );
+
+
+        downloadCSV(
+            "processing_logs.csv",
+            logsCSV
+        );
 
 
 
@@ -248,33 +229,121 @@ document
         document.getElementById("result").innerHTML =
 
         `
-        🐶解析完成！<br><br>
+        🐶整理完成！<br><br>
 
         📦聊天数量：
-        ${conversationCount}<br>
+        ${conversations.length}<br>
 
         💬消息数量：
         ${messageCount}<br><br>
 
-        已保存到 Supabase ✨
+        已生成4个CSV文件✨
         `;
 
 
 
     }
-    catch(err){
+    catch(e){
 
-
-        console.error(err);
-
+        console.error(e);
 
         document.getElementById("result").innerHTML =
-
-        "🥺失败："+err.message;
-
+        "🥺错误："+e.message;
 
     }
 
 
 
 });
+
+
+
+
+
+// CSV转义
+
+function escapeCSV(str){
+
+    return String(str)
+    .replace(/"/g,'""');
+
+}
+
+
+
+// 时间转换
+
+function date(time){
+
+    if(!time)
+    return "";
+
+    return new Date(
+        time*1000
+    )
+    .toISOString();
+
+}
+
+
+
+// 简单hash
+
+function hash(str){
+
+    let h=0;
+
+    for(
+        let i=0;
+        i<str.length;
+        i++
+    ){
+
+        h =
+        ((h<<5)-h)+str.charCodeAt(i);
+
+    }
+
+    return h.toString();
+
+}
+
+
+
+// 下载CSV
+
+function downloadCSV(
+    filename,
+    content
+){
+
+    const blob =
+    new Blob(
+        [content],
+        {
+            type:
+            "text/csv;charset=utf-8;"
+        }
+    );
+
+
+    const url =
+    URL.createObjectURL(blob);
+
+
+
+    const a =
+    document.createElement("a");
+
+
+    a.href=url;
+
+    a.download=filename;
+
+    a.click();
+
+
+
+    URL.revokeObjectURL(url);
+
+}
