@@ -1,17 +1,16 @@
-// =======================================
+// =====================================
 // Memory Puppy v0.3
-// ChatGPT ZIP -> Supabase CSV
-// =======================================
+// ZIP -> Supabase 四表 CSV
+// =====================================
 
 
 let zipFile = null;
 
 
-// 选择ZIP
 
 document
 .getElementById("zipInput")
-.addEventListener("change", function(e){
+.addEventListener("change", e => {
 
     zipFile = e.target.files[0];
 
@@ -27,16 +26,14 @@ document
 
 
 
-// 开始整理
-
 document
 .getElementById("startBtn")
-.addEventListener("click", async function(){
+.addEventListener("click", async()=>{
 
 
     if(!zipFile){
 
-        alert("🐶 请先选择ZIP文件");
+        alert("🐶 请先选择 ZIP");
 
         return;
 
@@ -44,73 +41,79 @@ document
 
 
 
-    const result =
-    document.getElementById("result");
-
-
-    result.innerHTML =
-    "🐶 小狗正在读取聊天记录...";
+    document.getElementById("result").innerHTML =
+    "🐾 小狗正在拆包...";
 
 
 
     try{
 
 
-        // 解压ZIP
-
         const zip =
         await JSZip.loadAsync(zipFile);
 
 
 
-        const file =
+        const jsonFile =
         zip.file("conversations.json");
 
 
 
-        if(!file){
+        if(!jsonFile){
 
             throw new Error(
-                "ZIP里面没有找到 conversations.json"
+                "找不到 conversations.json"
             );
 
         }
 
 
 
-        const json =
-        await file.async("string");
+        const text =
+        await jsonFile.async("text");
 
 
 
         const chats =
-        JSON.parse(json);
+        JSON.parse(text);
 
 
 
 
-        // CSV表头
+
+        // =============================
+        // 四张表 CSV
+        // =============================
+
 
         let conversationsCSV =
-        "id,title,source_file,file_hash,created_time,updated_time,created_at\n";
+`id,title,source_file,file_hash,created_time,updated_time,created_at
+`;
+
 
 
         let messagesCSV =
-        "id,conversation_id,role,content,message_time,message_hash,created_at\n";
+`id,conversation_id,role,content,message_time,message_hash,created_at
+`;
+
 
 
         let memoriesCSV =
-        "id,content,category,importance,source_message_id,memory_time,created_at\n";
+`id,content,category,importance,status,version,source_message_id,memory_time,created_at
+`;
+
 
 
         let logsCSV =
-        "id,file_name,file_hash,status,processed_at,message_count,memory_count\n";
-
+`id,file_name,file_hash,status,processed_at,message_count,memory_count
+`;
 
 
 
 
         let messageCount = 0;
+
+        let memoryCount = 0;
 
 
 
@@ -121,9 +124,8 @@ document
 
 
 
-        for(
-            const chat of chats
-        ){
+        for(const chat of chats){
+
 
 
             const conversationId =
@@ -132,13 +134,12 @@ document
 
 
             const now =
-            new Date()
-            .toISOString();
+            new Date().toISOString();
 
 
 
-
-            conversationsCSV += csvRow([
+            conversationsCSV +=
+            csvRow([
 
                 conversationId,
 
@@ -148,14 +149,13 @@ document
 
                 fileHash,
 
-                formatTime(chat.create_time),
+                unixTime(chat.create_time),
 
-                formatTime(chat.update_time),
+                unixTime(chat.update_time),
 
                 now
 
             ]);
-
 
 
 
@@ -168,41 +168,34 @@ document
 
 
 
-
             for(
                 const key in chat.mapping
             ){
 
 
 
-                const message =
+                const msg =
                 chat.mapping[key].message;
 
 
 
                 if(
-                    !message ||
-                    !message.content ||
-                    !message.content.parts
-                ){
-
-                    continue;
-
-                }
-
+                    !msg ||
+                    !msg.content ||
+                    !msg.content.parts
+                )
+                continue;
 
 
 
 
                 const content =
-                message.content.parts
-                .join("\n");
+                msg.content.parts.join("\n");
 
 
 
                 if(!content.trim())
-                    continue;
-
+                continue;
 
 
 
@@ -212,19 +205,26 @@ document
 
 
 
-                messagesCSV += csvRow([
+                const messageHash =
+                simpleHash(content);
+
+
+
+
+                messagesCSV +=
+                csvRow([
 
                     messageId,
 
                     conversationId,
 
-                    message.author?.role || "unknown",
+                    msg.author?.role || "unknown",
 
                     content,
 
-                    formatTime(message.create_time),
+                    unixTime(msg.create_time),
 
-                    simpleHash(content),
+                    messageHash,
 
                     now
 
@@ -234,8 +234,13 @@ document
 
                 messageCount++;
 
-            }
 
+
+
+                // 目前先留空
+                // 后面接AI记忆提取
+
+            }
 
 
         }
@@ -244,9 +249,11 @@ document
 
 
 
-        // 日志
+        // processing_logs
 
-        logsCSV += csvRow([
+
+        logsCSV +=
+        csvRow([
 
             crypto.randomUUID(),
 
@@ -256,12 +263,11 @@ document
 
             "success",
 
-            new Date()
-            .toISOString(),
+            new Date().toISOString(),
 
             messageCount,
 
-            0
+            memoryCount
 
         ]);
 
@@ -269,29 +275,25 @@ document
 
 
 
-
-
-        // 下载
-
-        downloadCSV(
+        download(
             "conversations.csv",
             conversationsCSV
         );
 
 
-        downloadCSV(
+        download(
             "messages.csv",
             messagesCSV
         );
 
 
-        downloadCSV(
+        download(
             "memories.csv",
             memoriesCSV
         );
 
 
-        downloadCSV(
+        download(
             "processing_logs.csv",
             logsCSV
         );
@@ -300,51 +302,52 @@ document
 
 
 
-        result.innerHTML =
+        document.getElementById("result").innerHTML =
 
-        `
-        🐶 整理完成！
+`
+🐶 整理完成！
 
-        <br><br>
+<br><br>
 
-        📦 聊天数量：
-        ${chats.length}
+📦 聊天数量：
+${chats.length}
 
-        <br>
+<br>
 
-        💬 消息数量：
-        ${messageCount}
+💬 消息数量：
+${messageCount}
 
-        <br><br>
+<br><br>
 
-        已生成：
+已生成：
 
-        <br>
-        🐾 conversations.csv
+<br>
 
-        <br>
-        🐾 messages.csv
+🐾 conversations.csv
 
-        <br>
-        🐾 memories.csv
+<br>
 
-        <br>
-        🐾 processing_logs.csv
+🐾 messages.csv
 
-        `;
+<br>
+
+🐾 memories.csv
+
+<br>
+
+🐾 processing_logs.csv
+
+`;
 
 
 
     }
-    catch(error){
+    catch(err){
 
+        console.error(err);
 
-        console.error(error);
-
-
-        result.innerHTML =
-        "🥺 出错：" + error.message;
-
+        document.getElementById("result").innerHTML =
+        "🥺 出错："+err.message;
 
     }
 
@@ -355,30 +358,22 @@ document
 
 
 
+// =============================
+// 工具
+// =============================
 
 
-// ===========================
-// 工具函数
-// ===========================
+function csvRow(arr){
 
+    return arr
+    .map(x=>
 
+        `"${String(x ?? "")
+        .replaceAll('"','""')}"`
 
-function csvRow(array){
-
-
-    return array
-    .map(value=>{
-
-        return '"' +
-        String(value ?? "")
-        .replaceAll('"','""')
-        +
-        '"';
-
-    })
+    )
     .join(",")
-    +
-    "\n";
+    + "\n";
 
 }
 
@@ -386,30 +381,16 @@ function csvRow(array){
 
 
 
-function formatTime(time){
+function unixTime(t){
 
+    if(!t)
+    return "";
 
-    if(!time)
-        return "";
-
-
-    try{
-
-        return new Date(
-            time * 1000
-        )
-        .toISOString();
-
-
-    }
-    catch{
-
-        return "";
-
-    }
+    return new Date(
+        t*1000
+    ).toISOString();
 
 }
-
 
 
 
@@ -417,14 +398,35 @@ function formatTime(time){
 
 function simpleHash(str){
 
-
-    let hash = 0;
-
-
-    str = String(str);
-
-
+    let hash=0;
 
     for(
-        let i = 0;
-  
+        let i=0;
+        i<str.length;
+        i++
+    ){
+
+        hash =
+        ((hash<<5)-hash)
+        +
+        str.charCodeAt(i);
+
+    }
+
+    return String(hash);
+
+}
+
+
+
+
+
+function download(
+    name,
+    content
+){
+
+    const blob =
+    new Blob(
+        [content],
+        
