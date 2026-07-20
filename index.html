@@ -5,11 +5,20 @@
 
 <meta charset="UTF-8">
 
-<title>Memory Puppy</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<title>Memory Puppy 🐶</title>
+
+
+<!-- 小狗打开 ZIP 的工具 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
+
+<link rel="stylesheet" href="style.css">
+
+
 </head>
+
 
 
 <body>
@@ -20,9 +29,10 @@
 
 <div class="puppy">
 
-🐶
+🐶✨
 
 </div>
+
 
 
 <h1>
@@ -31,8 +41,12 @@ Memory Puppy
 
 
 <p class="subtitle">
-把聊天记录变成属于你的记忆 ✨
+
+把聊天记录<br>
+变成属于你的珍贵记忆
+
 </p>
+
 
 
 
@@ -40,7 +54,7 @@ Memory Puppy
 
 
 <h2>
-📦 上传聊天包
+📦 投喂聊天包
 </h2>
 
 
@@ -49,15 +63,19 @@ Memory Puppy
 </p>
 
 
+
 <label class="upload">
 
-选择 ZIP 🐾
+
+🐾 选择 ZIP 文件
+
 
 <input 
 id="zipInput"
 type="file"
 accept=".zip"
 >
+
 
 </label>
 
@@ -71,21 +89,36 @@ accept=".zip"
 
 
 
+
 <button id="startBtn">
-开始整理 🐾
+
+开始整理 🐶
+
 </button>
 
 
+
+
+<div id="result">
+
+
+等待小狗收到聊天包...
+
+</div>
+
+
+
 </div>
 
 
 
-<div class="status"
-id="status">
 
-🐶 小狗正在等待主人...
+<div class="tip">
+
+汪！小狗会帮你读取聊天记录 ✨
 
 </div>
+
 
 
 
@@ -94,6 +127,8 @@ id="status">
 
 
 <script src="script.js"></script>
+
+
 
 </body>
 
