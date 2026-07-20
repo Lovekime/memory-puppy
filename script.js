@@ -1,16 +1,17 @@
-// =====================================
+// =======================================
 // Memory Puppy v0.3
-// ZIP -> Supabase 四表 CSV
-// =====================================
+// ChatGPT ZIP -> Supabase CSV
+// =======================================
 
 
 let zipFile = null;
 
 
+// 选择ZIP
 
 document
 .getElementById("zipInput")
-.addEventListener("change", e => {
+.addEventListener("change", function(e){
 
     zipFile = e.target.files[0];
 
@@ -26,14 +27,16 @@ document
 
 
 
+// 开始整理
+
 document
 .getElementById("startBtn")
-.addEventListener("click", async()=>{
+.addEventListener("click", async function(){
 
 
     if(!zipFile){
 
-        alert("🐶 请先选择 ZIP");
+        alert("🐶 请先选择ZIP文件");
 
         return;
 
@@ -41,79 +44,73 @@ document
 
 
 
-    document.getElementById("result").innerHTML =
-    "🐾 小狗正在拆包...";
+    const result =
+    document.getElementById("result");
+
+
+    result.innerHTML =
+    "🐶 小狗正在读取聊天记录...";
 
 
 
     try{
 
 
+        // 解压ZIP
+
         const zip =
         await JSZip.loadAsync(zipFile);
 
 
 
-        const jsonFile =
+        const file =
         zip.file("conversations.json");
 
 
 
-        if(!jsonFile){
+        if(!file){
 
             throw new Error(
-                "找不到 conversations.json"
+                "ZIP里面没有找到 conversations.json"
             );
 
         }
 
 
 
-        const text =
-        await jsonFile.async("text");
+        const json =
+        await file.async("string");
 
 
 
         const chats =
-        JSON.parse(text);
+        JSON.parse(json);
 
 
 
 
-
-        // =============================
-        // 四张表 CSV
-        // =============================
-
+        // CSV表头
 
         let conversationsCSV =
-`id,title,source_file,file_hash,created_time,updated_time,created_at
-`;
-
+        "id,title,source_file,file_hash,created_time,updated_time,created_at\n";
 
 
         let messagesCSV =
-`id,conversation_id,role,content,message_time,message_hash,created_at
-`;
-
+        "id,conversation_id,role,content,message_time,message_hash,created_at\n";
 
 
         let memoriesCSV =
-`id,content,category,importance,status,version,source_message_id,memory_time,created_at
-`;
-
+        "id,content,category,importance,source_message_id,memory_time,created_at\n";
 
 
         let logsCSV =
-`id,file_name,file_hash,status,processed_at,message_count,memory_count
-`;
+        "id,file_name,file_hash,status,processed_at,message_count,memory_count\n";
+
 
 
 
 
         let messageCount = 0;
-
-        let memoryCount = 0;
 
 
 
@@ -124,8 +121,9 @@ document
 
 
 
-        for(const chat of chats){
-
+        for(
+            const chat of chats
+        ){
 
 
             const conversationId =
@@ -134,12 +132,13 @@ document
 
 
             const now =
-            new Date().toISOString();
+            new Date()
+            .toISOString();
 
 
 
-            conversationsCSV +=
-            csvRow([
+
+            conversationsCSV += csvRow([
 
                 conversationId,
 
@@ -149,13 +148,14 @@ document
 
                 fileHash,
 
-                unixTime(chat.create_time),
+                formatTime(chat.create_time),
 
-                unixTime(chat.update_time),
+                formatTime(chat.update_time),
 
                 now
 
             ]);
+
 
 
 
@@ -168,34 +168,41 @@ document
 
 
 
+
             for(
                 const key in chat.mapping
             ){
 
 
 
-                const msg =
+                const message =
                 chat.mapping[key].message;
 
 
 
                 if(
-                    !msg ||
-                    !msg.content ||
-                    !msg.content.parts
-                )
-                continue;
+                    !message ||
+                    !message.content ||
+                    !message.content.parts
+                ){
+
+                    continue;
+
+                }
+
 
 
 
 
                 const content =
-                msg.content.parts.join("\n");
+                message.content.parts
+                .join("\n");
 
 
 
                 if(!content.trim())
-                continue;
+                    continue;
+
 
 
 
@@ -205,26 +212,19 @@ document
 
 
 
-                const messageHash =
-                simpleHash(content);
-
-
-
-
-                messagesCSV +=
-                csvRow([
+                messagesCSV += csvRow([
 
                     messageId,
 
                     conversationId,
 
-                    msg.author?.role || "unknown",
+                    message.author?.role || "unknown",
 
                     content,
 
-                    unixTime(msg.create_time),
+                    formatTime(message.create_time),
 
-                    messageHash,
+                    simpleHash(content),
 
                     now
 
@@ -234,13 +234,8 @@ document
 
                 messageCount++;
 
-
-
-
-                // 目前先留空
-                // 后面接AI记忆提取
-
             }
+
 
 
         }
@@ -249,11 +244,9 @@ document
 
 
 
-        // processing_logs
+        // 日志
 
-
-        logsCSV +=
-        csvRow([
+        logsCSV += csvRow([
 
             crypto.randomUUID(),
 
@@ -263,11 +256,12 @@ document
 
             "success",
 
-            new Date().toISOString(),
+            new Date()
+            .toISOString(),
 
             messageCount,
 
-            memoryCount
+            0
 
         ]);
 
@@ -275,25 +269,29 @@ document
 
 
 
-        download(
+
+
+        // 下载
+
+        downloadCSV(
             "conversations.csv",
             conversationsCSV
         );
 
 
-        download(
+        downloadCSV(
             "messages.csv",
             messagesCSV
         );
 
 
-        download(
+        downloadCSV(
             "memories.csv",
             memoriesCSV
         );
 
 
-        download(
+        downloadCSV(
             "processing_logs.csv",
             logsCSV
         );
@@ -302,52 +300,51 @@ document
 
 
 
-        document.getElementById("result").innerHTML =
+        result.innerHTML =
 
-`
-🐶 整理完成！
+        `
+        🐶 整理完成！
 
-<br><br>
+        <br><br>
 
-📦 聊天数量：
-${chats.length}
+        📦 聊天数量：
+        ${chats.length}
 
-<br>
+        <br>
 
-💬 消息数量：
-${messageCount}
+        💬 消息数量：
+        ${messageCount}
 
-<br><br>
+        <br><br>
 
-已生成：
+        已生成：
 
-<br>
+        <br>
+        🐾 conversations.csv
 
-🐾 conversations.csv
+        <br>
+        🐾 messages.csv
 
-<br>
+        <br>
+        🐾 memories.csv
 
-🐾 messages.csv
+        <br>
+        🐾 processing_logs.csv
 
-<br>
-
-🐾 memories.csv
-
-<br>
-
-🐾 processing_logs.csv
-
-`;
+        `;
 
 
 
     }
-    catch(err){
+    catch(error){
 
-        console.error(err);
 
-        document.getElementById("result").innerHTML =
-        "🥺 出错："+err.message;
+        console.error(error);
+
+
+        result.innerHTML =
+        "🥺 出错：" + error.message;
+
 
     }
 
@@ -358,4 +355,76 @@ ${messageCount}
 
 
 
-// =================
+
+
+// ===========================
+// 工具函数
+// ===========================
+
+
+
+function csvRow(array){
+
+
+    return array
+    .map(value=>{
+
+        return '"' +
+        String(value ?? "")
+        .replaceAll('"','""')
+        +
+        '"';
+
+    })
+    .join(",")
+    +
+    "\n";
+
+}
+
+
+
+
+
+function formatTime(time){
+
+
+    if(!time)
+        return "";
+
+
+    try{
+
+        return new Date(
+            time * 1000
+        )
+        .toISOString();
+
+
+    }
+    catch{
+
+        return "";
+
+    }
+
+}
+
+
+
+
+
+
+function simpleHash(str){
+
+
+    let hash = 0;
+
+
+    str = String(str);
+
+
+
+    for(
+        let i = 0;
+  
