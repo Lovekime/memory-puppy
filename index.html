@@ -9,34 +9,43 @@
 
 <title>Memory Puppy 🐶</title>
 
+
+<!-- 小狗打开 ZIP 的工具 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
 
 <link rel="stylesheet" href="style.css">
 
+
 </head>
+
 
 
 <body>
 
 
-<div class="container">
+<div class="app">
 
 
 <div class="puppy">
 
-<div class="face">
 🐶✨
+
 </div>
+
+
 
 <h1>
 Memory Puppy
 </h1>
 
-<p>
-把聊天记录变成你的长期记忆
-</p>
 
-</div>
+<p class="subtitle">
+
+把聊天记录<br>
+变成属于你的珍贵记忆
+
+</p>
 
 
 
@@ -49,20 +58,26 @@ Memory Puppy
 </h2>
 
 
+<p>
+选择 ChatGPT 导出的 ZIP 文件
+</p>
 
-<button id="chooseBtn">
+
+
+<label class="upload">
+
 
 🐾 选择 ZIP 文件
 
-</button>
 
-
-<input
+<input 
 id="zipInput"
 type="file"
 accept=".zip"
-style="display:none;"
 >
+
+
+</label>
 
 
 
@@ -74,35 +89,36 @@ style="display:none;"
 
 
 
+
 <button id="startBtn">
 
-开始整理 🐾
+开始整理 🐶
 
 </button>
 
 
-</div>
-
-
-
-
-
-<div class="card">
-
-
-<h2>
-🐶 小狗状态
-</h2>
 
 
 <div id="result">
 
-等待你的聊天包...
+
+等待小狗收到聊天包...
 
 </div>
 
 
+
 </div>
+
+
+
+
+<div class="tip">
+
+汪！小狗会帮你读取聊天记录 ✨
+
+</div>
+
 
 
 
@@ -111,6 +127,7 @@ style="display:none;"
 
 
 <script src="script.js"></script>
+
 
 
 </body>
