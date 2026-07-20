@@ -1,5 +1,5 @@
 // 🐶 Memory Puppy
-// ZIP 聊天解析核心 v2
+// ZIP 聊天解析核心 v3
 
 
 const zipInput = document.getElementById("zipInput");
@@ -13,18 +13,19 @@ let messages = [];
 
 
 
-// 选择文件后显示名字
+// 选择 ZIP
 
 zipInput.addEventListener("change",()=>{
 
     if(zipInput.files.length){
 
         fileNameBox.innerHTML =
-        "🐾 " + zipInput.files[0].name;
+        "🐶 收到啦： " + zipInput.files[0].name;
 
     }
 
 });
+
 
 
 
@@ -45,14 +46,15 @@ startBtn.onclick = async ()=>{
 
 
     resultBox.innerHTML =
-    "🐾 小狗正在拆聊天包...";
+    "🐾 小狗正在读取聊天包...";
 
 
 
     try{
 
 
-        const zip = await JSZip.loadAsync(
+        const zip =
+        await JSZip.loadAsync(
             zipInput.files[0]
         );
 
@@ -89,14 +91,13 @@ startBtn.onclick = async ()=>{
 
         if(!jsonFile){
 
-
             resultBox.innerHTML =
-            "🥺 没找到 conversations.json";
-
+            "🥺 找不到 conversations.json";
 
             return;
 
         }
+
 
 
 
@@ -116,6 +117,7 @@ startBtn.onclick = async ()=>{
 
 
 
+
         // 读取聊天
 
         conversations.forEach(chat=>{
@@ -123,6 +125,7 @@ startBtn.onclick = async ()=>{
 
             if(!chat.mapping)
                 return;
+
 
 
 
@@ -140,52 +143,87 @@ startBtn.onclick = async ()=>{
 
 
 
+
                 const role =
-                msg.author?.role || "unknown";
+                msg.author?.role
+                || "unknown";
 
 
 
-                let content="";
+
+                let content = "";
 
 
+
+
+                // 兼容新版格式
 
                 if(
                     msg.content &&
                     msg.content.parts
                 ){
 
+
                     content =
-                    msg.content.parts.join("\n");
+                    msg.content.parts.map(p=>{
+
+
+                        if(typeof p==="string"){
+
+                            return p;
+
+                        }
+
+
+
+                        if(p.content){
+
+                            return p.content;
+
+                        }
+
+
+
+                        return "";
+
+                    })
+                    .join("\n");
+
 
                 }
 
 
 
-                if(
-                    content.trim()
-                ){
 
 
+                if(content.trim()){
 
-                    // 优先使用消息时间
 
                     let time =
-                    msg.create_time ||
-                    chat.create_time;
+                    msg.create_time
+                    ||
+                    chat.create_time
+                    ||
+                    Date.now()/1000;
+
 
 
 
                     messages.push({
 
                         title:
-                        chat.title ||
+                        chat.title
+                        ||
                         "未命名聊天",
+
 
 
                         role,
 
 
+
                         content,
+
 
 
                         time:
@@ -194,7 +232,6 @@ startBtn.onclick = async ()=>{
                         )
 
                     });
-
 
 
                 }
@@ -210,6 +247,7 @@ startBtn.onclick = async ()=>{
 
 
 
+
         showResult();
 
 
@@ -221,17 +259,19 @@ startBtn.onclick = async ()=>{
         console.error(error);
 
 
-
         resultBox.innerHTML =
         "🐶 出错啦："
-        + error.message;
-
+        +
+        error.message;
 
 
     }
 
 
+
 };
+
+
 
 
 
@@ -252,7 +292,9 @@ function showResult(){
 
         return;
 
+
     }
+
 
 
 
@@ -279,10 +321,13 @@ function showResult(){
 
 
 
+
+
     resultBox.innerHTML = `
 
 
-🐶 解析完成！
+
+🐶 整理完成！
 
 
 <br><br>
@@ -293,7 +338,8 @@ function showResult(){
 ${conversations.length}
 
 
-<br>
+
+<br><br>
 
 
 💬 消息数量：
@@ -301,30 +347,50 @@ ${conversations.length}
 ${messages.length}
 
 
-<br>
+
+<br><br>
 
 
-📅 最早消息：
+📅 最早：
 
 ${formatDate(minTime)}
 
 
+
 <br>
 
 
-📅 最新消息：
+📅 最新：
 
 ${formatDate(maxTime)}
+
 
 
 <br><br>
 
 
-<button onclick="exportCSV()">
+
+
+<button
+
+style="
+margin-top:20px;
+padding:15px 45px;
+border:none;
+border-radius:30px;
+background:#ff9ed8;
+color:white;
+font-size:18px;
+"
+
+onclick="exportCSV()"
+
+>
 
 🐾 导出 CSV
 
 </button>
+
 
 
 `;
@@ -339,16 +405,18 @@ ${formatDate(maxTime)}
 
 
 
+
 function formatDate(date){
 
 
-    return date
-    .toLocaleDateString(
+    return date.toLocaleDateString(
         "zh-CN"
     );
 
 
 }
+
+
 
 
 
@@ -366,14 +434,19 @@ function exportCSV(){
 
 
 
+
     messages.forEach(m=>{
 
 
         csv +=
+
         `"${m.time.toISOString()}","${safe(m.title)}","${safe(m.role)}","${safe(m.content)}"\n`;
 
 
+
     });
+
+
 
 
 
@@ -390,8 +463,11 @@ function exportCSV(){
 
 
 
+
     const url =
     URL.createObjectURL(blob);
+
+
 
 
 
@@ -403,12 +479,21 @@ function exportCSV(){
     a.href=url;
 
 
+
     a.download =
     "memory-puppy-chat.csv";
 
 
 
+    document.body.appendChild(a);
+
+
+
     a.click();
+
+
+
+    document.body.removeChild(a);
 
 
 
@@ -423,12 +508,18 @@ function exportCSV(){
 
 
 
+
+
+
 function safe(text){
 
 
     return String(text)
+
     .replaceAll('"','""')
+
     .replace(/\n/g," ");
+
 
 
 }
