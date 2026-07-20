@@ -406,3 +406,53 @@ button:hover {
 
 
 }
+
+
+/* 手机标题修复 */
+
+.hero h1,
+h1 {
+
+    font-size:42px !important;
+
+    line-height:1.25;
+
+    text-align:center;
+
+    word-break:break-word;
+
+}
+
+
+.hero p,
+.subtitle {
+
+    font-size:18px;
+
+    line-height:1.6;
+
+    text-align:center;
+
+}
+
+
+
+/* 手机适配 */
+
+@media(max-width:600px){
+
+    h1 {
+
+        font-size:38px !important;
+
+    }
+
+
+    .container {
+
+        padding:20px 15px;
+
+    }
+
+
+}
