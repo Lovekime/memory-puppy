@@ -1,26 +1,44 @@
-// 🐶 Memory Puppy
-// ZIP 聊天解析核心 v2
+// ===============================
+// Memory Puppy
+// Supabase + ZIP Parser
+// ===============================
 
 
-const zipInput = document.getElementById("zipInput");
-const startBtn = document.getElementById("startBtn");
-const resultBox = document.getElementById("result");
-const fileNameBox = document.getElementById("fileName");
+// 你的 Supabase 地址
+const SUPABASE_URL = 
+"https://wgkajqfixhrqvpxcncgp.supabase.co";
 
 
-let conversations = [];
-let messages = [];
+// 把这里换成你的 publishable key
+const SUPABASE_KEY =
+"sb_publishable_2DvJBREf4uQgijcK1SsVCw_wO64lct9";
+
+
+// 创建 Supabase 客户端
+const supabaseClient = supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+);
 
 
 
-// 选择文件后显示名字
+let zipFile = null;
 
-zipInput.addEventListener("change",()=>{
 
-    if(zipInput.files.length){
+// ===============================
+// 选择ZIP
+// ===============================
 
-        fileNameBox.innerHTML =
-        "🐾 " + zipInput.files[0].name;
+document
+.getElementById("zipInput")
+.addEventListener("change", function(e){
+
+    zipFile = e.target.files[0];
+
+    if(zipFile){
+
+        document.getElementById("result").innerHTML =
+        "🐾 已选择：" + zipFile.name;
 
     }
 
@@ -28,15 +46,18 @@ zipInput.addEventListener("change",()=>{
 
 
 
+// ===============================
+// 开始整理
+// ===============================
 
-// 开始解析
+document
+.getElementById("startBtn")
+.addEventListener("click", async function(){
 
-startBtn.onclick = async ()=>{
 
+    if(!zipFile){
 
-    if(!zipInput.files[0]){
-
-        alert("🐶 请先选择 ZIP 文件");
+        alert("请先选择ZIP文件🐶");
 
         return;
 
@@ -44,391 +65,216 @@ startBtn.onclick = async ()=>{
 
 
 
-    resultBox.innerHTML =
-    "🐾 小狗正在拆聊天包...";
+    document.getElementById("result").innerHTML =
+    "🐾 小狗正在解析聊天包...";
 
 
 
     try{
 
 
-        const zip = await JSZip.loadAsync(
-            zipInput.files[0]
-        );
+        // 解压ZIP
+
+        const zip =
+        await JSZip.loadAsync(zipFile);
 
 
 
-        resultBox.innerHTML =
-        "🐾 正在寻找 conversations.json...";
+        // 找 conversations.json
+
+        const file =
+        zip.file("conversations.json");
 
 
 
-        let jsonFile = null;
+        if(!file){
 
-
-
-        for(
-            const name of Object.keys(zip.files)
-        ){
-
-            if(
-                name.endsWith("conversations.json")
-            ){
-
-                jsonFile =
-                zip.files[name];
-
-                break;
-
-            }
+            throw new Error(
+            "没有找到 conversations.json"
+            );
 
         }
 
 
 
-
-        if(!jsonFile){
-
-
-            resultBox.innerHTML =
-            "🥺 没找到 conversations.json";
-
-
-            return;
-
-        }
+        const json =
+        await file.async("string");
 
 
 
-
-        const text =
-        await jsonFile.async("text");
-
-
-
-        conversations =
-        JSON.parse(text);
+        const conversations =
+        JSON.parse(json);
 
 
 
-        messages = [];
+        let messageCount = 0;
+
+
+        let conversationCount =
+        conversations.length;
 
 
 
-
-        // 读取聊天
-
-        conversations.forEach(chat=>{
-
-
-            if(!chat.mapping)
-                return;
+        // ===============================
+        // 写入 conversations
+        // ===============================
 
 
+        for(const chat of conversations){
 
-            Object.values(chat.mapping)
-            .forEach(node=>{
+
+            const {data:conversation,error}
+            =
+            await supabaseClient
+            .from("conversations")
+            .insert({
+
+                title:
+                chat.title || "未命名聊天",
+
+                source_file:
+                zipFile.name,
+
+                created_time:
+                new Date().toISOString()
+
+            })
+            .select()
+            .single();
+
+
+
+            if(error)
+            throw error;
+
+
+
+            const messages =
+            chat.mapping;
+
+
+
+            for(const key in messages){
 
 
                 const msg =
-                node.message;
-
-
-
-                if(!msg)
-                    return;
-
-
-
-                const role =
-                msg.author?.role || "unknown";
-
-
-
-                let content="";
+                messages[key].message;
 
 
 
                 if(
+                    msg &&
                     msg.content &&
                     msg.content.parts
                 ){
 
-                    content =
+
+                    const content =
                     msg.content.parts.join("\n");
 
-                }
 
 
+                    const {error:msgError}
+                    =
+                    await supabaseClient
+                    .from("messages")
+                    .insert({
 
-                if(
-                    content.trim()
-                ){
+                        conversation_id:
+                        conversation.id,
 
+                        role:
+                        msg.author?.role || "unknown",
 
-
-                    // 优先使用消息时间
-
-                    let time =
-                    msg.create_time ||
-                    chat.create_time;
-
-
-
-                    messages.push({
-
-                        title:
-                        chat.title ||
-                        "未命名聊天",
-
-
-                        role,
-
-
+                        content:
                         content,
 
-
-                        time:
+                        message_time:
+                        msg.create_time
+                        ?
                         new Date(
-                            time * 1000
+                        msg.create_time*1000
                         )
+                        :
+                        null
 
                     });
 
 
 
+                    if(msgError)
+                    throw msgError;
+
+
+
+                    messageCount++;
+
+
                 }
 
 
+            }
 
-            });
+
+        }
 
 
+
+
+        // 写日志
+
+        await supabaseClient
+        .from("processing_logs")
+        .insert({
+
+            file_name:
+            zipFile.name,
+
+            status:
+            "success",
+
+            message_count:
+            messageCount,
+
+            memory_count:
+            0
 
         });
 
 
 
 
-        showResult();
+
+        document.getElementById("result").innerHTML =
+
+        `
+        🐶解析完成！<br><br>
+
+        📦聊天数量：
+        ${conversationCount}<br>
+
+        💬消息数量：
+        ${messageCount}<br><br>
+
+        已保存到 Supabase ✨
+        `;
 
 
 
     }
-    catch(error){
+    catch(err){
 
 
-        console.error(error);
+        console.error(err);
 
 
+        document.getElementById("result").innerHTML =
 
-        resultBox.innerHTML =
-        "🐶 出错啦："
-        + error.message;
+        "🥺失败："+err.message;
 
-
-
-    }
-
-
-};
-
-
-
-
-
-
-
-function showResult(){
-
-
-
-    if(messages.length===0){
-
-
-        resultBox.innerHTML =
-        "🥺 没找到聊天消息";
-
-
-        return;
 
     }
 
 
 
-
-    const times =
-    messages.map(
-        m=>m.time.getTime()
-    );
-
-
-
-    const minTime =
-    new Date(
-        Math.min(...times)
-    );
-
-
-
-    const maxTime =
-    new Date(
-        Math.max(...times)
-    );
-
-
-
-
-    resultBox.innerHTML = `
-
-
-🐶 解析完成！
-
-
-<br><br>
-
-
-📦 聊天数量：
-
-${conversations.length}
-
-
-<br>
-
-
-💬 消息数量：
-
-${messages.length}
-
-
-<br>
-
-
-📅 最早消息：
-
-${formatDate(minTime)}
-
-
-<br>
-
-
-📅 最新消息：
-
-${formatDate(maxTime)}
-
-
-<br><br>
-
-
-<button onclick="exportCSV()">
-
-🐾 导出 CSV
-
-</button>
-
-
-`;
-
-
-
-}
-
-
-
-
-
-
-
-function formatDate(date){
-
-
-    return date
-    .toLocaleDateString(
-        "zh-CN"
-    );
-
-
-}
-
-
-
-
-
-
-
-function exportCSV(){
-
-
-
-    let csv =
-    "时间,聊天标题,角色,内容\n";
-
-
-
-
-    messages.forEach(m=>{
-
-
-        csv +=
-        `"${m.time.toISOString()}","${safe(m.title)}","${safe(m.role)}","${safe(m.content)}"\n`;
-
-
-    });
-
-
-
-
-    const blob =
-    new Blob(
-        [csv],
-        {
-            type:
-            "text/csv;charset=utf-8;"
-        }
-    );
-
-
-
-
-    const url =
-    URL.createObjectURL(blob);
-
-
-
-    const a =
-    document.createElement("a");
-
-
-
-    a.href=url;
-
-
-    a.download =
-    "memory-puppy-chat.csv";
-
-
-
-    a.click();
-
-
-
-    URL.revokeObjectURL(url);
-
-
-
-}
-
-
-
-
-
-
-function safe(text){
-
-
-    return String(text)
-    .replaceAll('"','""')
-    .replace(/\n/g," ");
-
-
-}
+});
