@@ -10,7 +10,7 @@
 <title>Memory Puppy 🐶</title>
 
 
-<!-- 小狗打开 ZIP 的工具 -->
+<!-- ZIP解析 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 
@@ -20,105 +20,144 @@
 </head>
 
 
-
 <body>
 
 
-<div class="app">
+<div class="container">
 
 
-<div class="puppy">
+    <div class="puppy">
 
-🐶✨
+        <div class="face">
+            🐶
+        </div>
 
-</div>
+        <h1>
+            Memory Puppy
+        </h1>
 
+        <p>
+            把聊天记录变成你的长期记忆 ✨
+        </p>
 
-
-<h1>
-Memory Puppy
-</h1>
-
-
-<p class="subtitle">
-
-把聊天记录<br>
-变成属于你的珍贵记忆
-
-</p>
+    </div>
 
 
 
 
-<div class="card">
+    <div class="card">
 
 
-<h2>
-📦 投喂聊天包
-</h2>
+        <h2>
+            📦 投喂聊天包
+        </h2>
 
 
-<p>
-选择 ChatGPT 导出的 ZIP 文件
-</p>
+        <label class="upload">
 
 
-
-<label class="upload">
-
-
-🐾 选择 ZIP 文件
+            🐾 选择 ZIP 文件
 
 
-<input 
-id="zipInput"
-type="file"
-accept=".zip"
->
+            <input
+            id="zipInput"
+            type="file"
+            accept=".zip"
+            >
 
 
-</label>
+        </label>
 
 
 
-<div id="fileName">
+        <div id="fileName">
 
-还没有选择文件
+            还没有选择文件
 
-</div>
+        </div>
 
 
 
 
-<button id="startBtn">
+        <button id="startBtn">
 
-开始整理 🐶
+            开始整理 🐾
 
-</button>
-
-
-
-
-<div id="result">
-
-
-等待小狗收到聊天包...
-
-</div>
+        </button>
 
 
 
-</div>
+    </div>
 
 
 
 
-<div class="tip">
 
-汪！小狗会帮你读取聊天记录 ✨
+    <div class="card result-card">
 
-</div>
 
+        <h2>
+            🐶 小狗状态
+        </h2>
+
+
+        <div id="result">
+
+            等待你的聊天包...
+
+        </div>
+
+
+    </div>
+
+
+
+
+    <div class="memory-card">
+
+
+        <h2>
+            🧠 Memory Puppy
+        </h2>
+
+
+        <div class="memory-item">
+
+            ❤️ 兴趣
+
+            <br>
+
+            等待发现...
+
+        </div>
+
+
+
+        <div class="memory-item">
+
+            📌 当前项目
+
+            <br>
+
+            等待发现...
+
+        </div>
+
+
+
+
+        <div class="memory-item">
+
+            🌱 最近变化
+
+            <br>
+
+            等待发现...
+
+        </div>
+
+
+    </div>
 
 
 
@@ -129,7 +168,7 @@ accept=".zip"
 <script src="script.js"></script>
 
 
-
 </body>
+
 
 </html>
