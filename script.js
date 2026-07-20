@@ -1,66 +1,289 @@
-const file =
-document.getElementById("zipFile");
+// 🐶 Memory Puppy
+// ZIP 聊天记录解析核心
+
+const zipInput = document.getElementById("zipInput");
+const startBtn = document.getElementById("startBtn");
+const resultBox = document.getElementById("result");
+
+let conversations = [];
+let messages = [];
 
 
-const fileName =
-document.getElementById("fileName");
+startBtn.onclick = async () => {
+
+    if (!zipInput.files[0]) {
+        alert("🐶 请先选择 ChatGPT ZIP 文件");
+        return;
+    }
 
 
-const start =
-document.getElementById("start");
+    resultBox.innerHTML = "🐾 小狗正在拆 ZIP...";
 
 
-const status =
-document.getElementById("status");
+    try {
+
+        const zipFile = zipInput.files[0];
+
+        const zip = await JSZip.loadAsync(zipFile);
+
+
+        resultBox.innerHTML = 
+        "🐾 正在寻找 conversations.json...";
+
+
+        let jsonFile = null;
+
+
+        for (const fileName of Object.keys(zip.files)) {
+
+            if (fileName.endsWith("conversations.json")) {
+                jsonFile = zip.files[fileName];
+                break;
+            }
+
+        }
+
+
+        if (!jsonFile) {
+
+            resultBox.innerHTML =
+            "🥺 没找到 conversations.json";
+
+            return;
+        }
+
+
+        const text = await jsonFile.async("text");
+
+
+        conversations = JSON.parse(text);
 
 
 
-file.onchange = ()=>{
+        messages = [];
 
 
-if(file.files.length){
+        // 解析聊天
+
+        conversations.forEach(chat => {
 
 
-fileName.innerHTML =
-"🐾 "+file.files[0].name;
+            const mapping = chat.mapping;
 
 
-status.innerHTML =
-"收到啦！小狗准备好了 🐶";
+            if (!mapping) return;
 
 
-}
+
+            Object.values(mapping).forEach(node => {
+
+
+                const msg = node.message;
+
+
+                if (!msg) return;
+
+
+                const role = msg.author?.role || "";
+
+
+                let content = "";
+
+
+                try {
+
+                    content =
+                    msg.content.parts.join("\n");
+
+                }
+
+                catch {
+
+                    content = "";
+
+                }
+
+
+
+                if(content.trim()) {
+
+
+                    messages.push({
+
+                        time:
+                        new Date(
+                        chat.create_time * 1000
+                        ),
+
+                        title:
+                        chat.title || "未命名聊天",
+
+                        role,
+
+                        content
+
+                    });
+
+
+                }
+
+
+            });
+
+
+
+        });
+
+
+
+        showResult();
+
+
+
+    }
+
+    catch(error){
+
+        console.error(error);
+
+        resultBox.innerHTML =
+        "🐶 出错啦："
+        + error.message;
+
+    }
 
 
 };
 
 
 
-start.onclick = ()=>{
 
 
-if(!file.files.length){
+function showResult(){
 
-status.innerHTML =
-"🥺 先给小狗一个 ZIP 文件吧";
 
-return;
+    if(messages.length===0){
+
+        resultBox.innerHTML=
+        "🥺 没解析到消息";
+
+        return;
+
+    }
+
+
+
+    const times =
+    messages.map(
+        m=>m.time
+    );
+
+
+    const minTime =
+    new Date(
+        Math.min(
+        ...times.map(t=>t.getTime())
+        )
+    );
+
+
+    const maxTime =
+    new Date(
+        Math.max(
+        ...times.map(t=>t.getTime())
+        )
+    );
+
+
+
+    resultBox.innerHTML = `
+
+    🐶 解析完成！
+
+    <br><br>
+
+    📦 聊天数量：
+    ${conversations.length}
+
+    <br>
+
+    💬 消息数量：
+    ${messages.length}
+
+    <br>
+
+    📅 时间范围：
+
+    <br>
+
+    ${minTime.toLocaleDateString()}
+    ~
+
+    ${maxTime.toLocaleDateString()}
+
+    <br><br>
+
+    <button onclick="exportCSV()">
+    🐾 导出 CSV
+    </button>
+
+    `;
+
 
 }
 
 
-status.innerHTML =
-"🐶 正在拆开聊天包...";
 
 
-setTimeout(()=>{
+
+function exportCSV(){
 
 
-status.innerHTML =
-"✨ 下一步：开始解析聊天记录";
+    let csv =
+    "时间,聊天标题,角色,内容\n";
 
 
-},1500);
+    messages.forEach(m=>{
 
 
-};
+        csv +=
+        `"${m.time.toISOString()}","${m.title.replaceAll('"','""')}","${m.role}","${m.content.replaceAll('"','""')}"\n`;
+
+
+    });
+
+
+
+    const blob =
+    new Blob(
+        [csv],
+        {
+            type:"text/csv;charset=utf-8;"
+        }
+    );
+
+
+
+    const url =
+    URL.createObjectURL(blob);
+
+
+
+    const a =
+    document.createElement("a");
+
+
+    a.href=url;
+
+    a.download=
+    "memory-puppy-chat.csv";
+
+
+    a.click();
+
+
+
+    URL.revokeObjectURL(url);
+
+
+}
