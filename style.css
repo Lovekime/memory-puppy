@@ -407,81 +407,44 @@ button:hover {
 
 }
 
+/* 🐶 Memory Puppy 标题修复 */
 
-/* 手机标题修复 */
-
-.hero h1,
-h1 {
+.puppy h1 {
 
     font-size:42px !important;
+    line-height:1.3 !important;
+    text-align:center !important;
+    color:#5b3b55 !important;
 
-    line-height:1.25;
-
-    text-align:center;
+    max-width:90%;
+    margin:20px auto;
 
     word-break:break-word;
 
 }
 
 
-.hero p,
-.subtitle {
+.puppy p {
 
-    font-size:18px;
-
-    line-height:1.6;
-
+    font-size:18px !important;
+    line-height:1.8 !important;
     text-align:center;
 
-}
-
-
-
-/* 手机适配 */
-
-@media(max-width:600px){
-
-    h1 {
-
-        font-size:38px !important;
-
-    }
-
-
-    .container {
-
-        padding:20px 15px;
-
-    }
-
+    color:#9b7d91;
 
 }
 
-/* Memory Puppy 标题强制修复 */
 
-.title,
-.hero-title,
-.main-title,
-.logo-title,
-header h1 {
+.face {
 
-    font-size:42px !important;
-    line-height:1.3 !important;
-    text-align:center !important;
-    max-width:90vw !important;
-    margin:auto !important;
-    overflow-wrap:break-word !important;
+    font-size:70px;
 
 }
 
 
 @media(max-width:600px){
 
-.title,
-.hero-title,
-.main-title,
-.logo-title,
-header h1 {
+.puppy h1 {
 
     font-size:36px !important;
 
