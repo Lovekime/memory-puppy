@@ -1,17 +1,16 @@
-// ================================
-// Memory Puppy v0.2
-// ZIP -> 4 CSV
-// ================================
+// =====================================
+// Memory Puppy v0.3
+// ZIP -> Supabase 四表 CSV
+// =====================================
 
 
 let zipFile = null;
 
 
-// 选择ZIP
 
 document
 .getElementById("zipInput")
-.addEventListener("change", function(e){
+.addEventListener("change", e => {
 
     zipFile = e.target.files[0];
 
@@ -26,46 +25,44 @@ document
 
 
 
-// 开始整理
 
 document
 .getElementById("startBtn")
-.addEventListener("click", async function(){
+.addEventListener("click", async()=>{
 
 
     if(!zipFile){
 
-        alert("请先选择ZIP文件🐶");
+        alert("🐶 请先选择 ZIP");
 
         return;
 
     }
 
 
+
     document.getElementById("result").innerHTML =
-    "🐶 小狗正在拆聊天包...";
+    "🐾 小狗正在拆包...";
 
 
 
     try{
 
 
-        // 解压
-
         const zip =
         await JSZip.loadAsync(zipFile);
 
 
 
-        const file =
+        const jsonFile =
         zip.file("conversations.json");
 
 
 
-        if(!file){
+        if(!jsonFile){
 
             throw new Error(
-            "没有找到 conversations.json"
+                "找不到 conversations.json"
             );
 
         }
@@ -73,47 +70,61 @@ document
 
 
         const text =
-        await file.async("string");
+        await jsonFile.async("text");
 
 
 
-        const conversations =
+        const chats =
         JSON.parse(text);
 
 
 
+
+
+        // =============================
+        // 四张表 CSV
+        // =============================
+
+
         let conversationsCSV =
-        "id,title,source_file,created_time,updated_time\n";
+`id,title,source_file,file_hash,created_time,updated_time,created_at
+`;
+
 
 
         let messagesCSV =
-        "id,conversation_id,role,content,message_time,message_hash\n";
+`id,conversation_id,role,content,message_time,message_hash,created_at
+`;
+
 
 
         let memoriesCSV =
-        "id,content,category,importance,memory_time\n";
+`id,content,category,importance,status,version,source_message_id,memory_time,created_at
+`;
+
 
 
         let logsCSV =
-        "file_name,status,processed_at,message_count,memory_count\n";
+`id,file_name,file_hash,status,processed_at,message_count,memory_count
+`;
+
 
 
 
         let messageCount = 0;
 
+        let memoryCount = 0;
 
 
-        // 遍历聊天
 
-        for(
-            let i=0;
-            i<conversations.length;
-            i++
-        ){
+        const fileHash =
+        simpleHash(zipFile.name);
 
 
-            const chat =
-            conversations[i];
+
+
+
+        for(const chat of chats){
 
 
 
@@ -122,103 +133,167 @@ document
 
 
 
+            const now =
+            new Date().toISOString();
+
+
+
             conversationsCSV +=
-            `"${conversationId}",`+
-            `"${escapeCSV(chat.title || "未命名")}",`+
-            `"${zipFile.name}",`+
-            `"${date(chat.create_time)}",`+
-            `"${date(chat.update_time)}"\n`;
+            csvRow([
+
+                conversationId,
+
+                chat.title || "未命名聊天",
+
+                zipFile.name,
+
+                fileHash,
+
+                unixTime(chat.create_time),
+
+                unixTime(chat.update_time),
+
+                now
+
+            ]);
 
 
 
-            const mapping =
-            chat.mapping;
 
 
 
-            for(const key in mapping){
+            if(!chat.mapping)
+                continue;
+
+
+
+
+            for(
+                const key in chat.mapping
+            ){
+
 
 
                 const msg =
-                mapping[key].message;
+                chat.mapping[key].message;
 
 
 
                 if(
-                    msg &&
-                    msg.content &&
-                    msg.content.parts
-                ){
-
-
-                    const messageId =
-                    crypto.randomUUID();
+                    !msg ||
+                    !msg.content ||
+                    !msg.content.parts
+                )
+                continue;
 
 
 
-                    const content =
-                    msg.content.parts.join("\n");
+
+                const content =
+                msg.content.parts.join("\n");
 
 
 
-                    messagesCSV +=
-
-                    `"${messageId}",`+
-                    `"${conversationId}",`+
-                    `"${msg.author?.role || "unknown"}",`+
-                    `"${escapeCSV(content)}",`+
-                    `"${date(msg.create_time)}",`+
-                    `"${hash(content)}"\n`;
+                if(!content.trim())
+                continue;
 
 
 
-                    messageCount++;
+
+                const messageId =
+                crypto.randomUUID();
 
 
-                }
 
+                const messageHash =
+                simpleHash(content);
+
+
+
+
+                messagesCSV +=
+                csvRow([
+
+                    messageId,
+
+                    conversationId,
+
+                    msg.author?.role || "unknown",
+
+                    content,
+
+                    unixTime(msg.create_time),
+
+                    messageHash,
+
+                    now
+
+                ]);
+
+
+
+                messageCount++;
+
+
+
+
+                // 目前先留空
+                // 后面接AI记忆提取
 
             }
-
 
 
         }
 
 
 
+
+
+        // processing_logs
+
+
         logsCSV +=
+        csvRow([
 
-        `"${zipFile.name}",`+
-        `"success",`+
-        `"${new Date().toISOString()}",`+
-        `"${messageCount}",0`;
+            crypto.randomUUID(),
+
+            zipFile.name,
+
+            fileHash,
+
+            "success",
+
+            new Date().toISOString(),
+
+            messageCount,
+
+            memoryCount
+
+        ]);
 
 
 
 
 
-        // 下载四个文件
-
-
-        downloadCSV(
+        download(
             "conversations.csv",
             conversationsCSV
         );
 
 
-        downloadCSV(
+        download(
             "messages.csv",
             messagesCSV
         );
 
 
-        downloadCSV(
+        download(
             "memories.csv",
             memoriesCSV
         );
 
 
-        downloadCSV(
+        download(
             "processing_logs.csv",
             logsCSV
         );
@@ -226,32 +301,55 @@ document
 
 
 
+
         document.getElementById("result").innerHTML =
 
-        `
-        🐶整理完成！<br><br>
+`
+🐶 整理完成！
 
-        📦聊天数量：
-        ${conversations.length}<br>
+<br><br>
 
-        💬消息数量：
-        ${messageCount}<br><br>
+📦 聊天数量：
+${chats.length}
 
-        已生成4个CSV文件✨
-        `;
+<br>
+
+💬 消息数量：
+${messageCount}
+
+<br><br>
+
+已生成：
+
+<br>
+
+🐾 conversations.csv
+
+<br>
+
+🐾 messages.csv
+
+<br>
+
+🐾 memories.csv
+
+<br>
+
+🐾 processing_logs.csv
+
+`;
 
 
 
     }
-    catch(e){
+    catch(err){
 
-        console.error(e);
+        console.error(err);
 
         document.getElementById("result").innerHTML =
-        "🥺错误："+e.message;
+        "🥺 出错："+err.message;
 
     }
-
 
 
 });
@@ -260,90 +358,4 @@ document
 
 
 
-// CSV转义
-
-function escapeCSV(str){
-
-    return String(str)
-    .replace(/"/g,'""');
-
-}
-
-
-
-// 时间转换
-
-function date(time){
-
-    if(!time)
-    return "";
-
-    return new Date(
-        time*1000
-    )
-    .toISOString();
-
-}
-
-
-
-// 简单hash
-
-function hash(str){
-
-    let h=0;
-
-    for(
-        let i=0;
-        i<str.length;
-        i++
-    ){
-
-        h =
-        ((h<<5)-h)+str.charCodeAt(i);
-
-    }
-
-    return h.toString();
-
-}
-
-
-
-// 下载CSV
-
-function downloadCSV(
-    filename,
-    content
-){
-
-    const blob =
-    new Blob(
-        [content],
-        {
-            type:
-            "text/csv;charset=utf-8;"
-        }
-    );
-
-
-    const url =
-    URL.createObjectURL(blob);
-
-
-
-    const a =
-    document.createElement("a");
-
-
-    a.href=url;
-
-    a.download=filename;
-
-    a.click();
-
-
-
-    URL.revokeObjectURL(url);
-
-}
+// =================
